@@ -5,12 +5,19 @@
     "serve": "firebase serve --only functions",
     "shell": "firebase experimental:functions:shell",
     "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "deploy": "tsc && firebase deploy --only functions"
   },
   "dependencies": {
     "firebase-admin": "~5.4.2",
     "firebase-functions": "^0.7.1"
   },
-  "private": true
+  "private": true,
+  "main": "out/index.js",
+  "devDependencies": {
+    "tslint": "^5.9.1",
+    "typescript": "^2.6.2"
+  }
 }
