@@ -6,6 +6,7 @@
     "shell": "firebase experimental:functions:shell",
     "start": "npm run shell",
     "logs": "firebase functions:log",
+    "test": "jest",
     "build": "tsc",
     "watch": "tsc --watch",
     "deploy": "tsc && firebase deploy --only functions"
@@ -17,7 +18,21 @@
   "private": true,
   "main": "out/index.js",
   "devDependencies": {
+    "@types/jest": "^22.0.0",
+    "jest": "^22.0.6",
+    "ts-jest": "^22.0.0",
     "tslint": "^5.9.1",
     "typescript": "^2.6.2"
+  },
+  "jest": {
+    "transform": {
+      "\\.ts": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "src/__tests__/.*.test.ts",
+    "moduleFileExtensions": [
+      "ts",
+      "js",
+      "json"
+    ]
   }
 }
