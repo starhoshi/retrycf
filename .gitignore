@@ -91,6 +91,7 @@ typings/
 .env
 
 # Firebase
+sandbox-329fc-firebase-adminsdk.json
 .runtimeconfig.json
 firebase-debug.log
 out/
