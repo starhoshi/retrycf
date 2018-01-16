@@ -11,8 +11,12 @@ export const createTestOrder = functions.firestore.document(`/version/1/testorde
   const testOrderData = event.data.data()
   const testOrderID = event.params!.testOrderID
 
+  console.log(testOrderID, 'start')
+
   const skus = <FirebaseFirestore.DocumentReference[]>testOrderData.orderSKUs
   await decreaseStock(skus)
+
+  console.log(testOrderID, 'finish')
 
   return undefined
 })
@@ -20,7 +24,7 @@ export const createTestOrder = functions.firestore.document(`/version/1/testorde
 export const createTestOrder2 = functions.firestore.document(`/version/1/testorder2/{testOrderID}`).onCreate(async event => {
   const testOrderData = event.data.data()
   const testOrderID = event.params!.testOrderID
-  console.log(testOrderID, 'stert')
+  console.log(testOrderID, 'start')
 
   const skus = <FirebaseFirestore.DocumentReference[]>testOrderData.orderSKUs
   await decreaseStock(skus)

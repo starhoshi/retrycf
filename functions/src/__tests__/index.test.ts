@@ -18,7 +18,7 @@ it('order create', async () => {
 
   const testOrderColRef = admin.firestore().collection('version/1/testorder')
   const testOrderColRef2 = admin.firestore().collection('version/1/testorder2')
-  const testOrders = [...Array(300).keys()].map(a => {
+  const testOrders = [...Array(50).keys()].map(a => {
     const testOrder: any = {}
     testOrder.orderSKUs = skus
     return testOrder
@@ -29,12 +29,6 @@ it('order create', async () => {
   await Promise.all(testOrders.map(testOrder => {
     return testOrderColRef2.add(testOrder)
   }))
-  // await Promise.all(testOrders.map(testOrder => {
-  //   return testOrderColRef.add(testOrder)
-  // }))
-  // await Promise.all(testOrders.map(testOrder => {
-  //   return testOrderColRef2.add(testOrder)
-  // }))
 
   expect(true)
 })
