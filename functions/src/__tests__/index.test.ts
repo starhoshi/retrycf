@@ -35,11 +35,9 @@ const addOrdersAtOnce = async (testOrders: any[]) => {
   const testOrderColRef2 = admin.firestore().collection('version/1/testorder2')
 
   await Promise.all(testOrders.map(async testOrder => {
-    console.log(testOrder)
     return testOrderColRef.add(testOrder)
   }))
   await Promise.all(testOrders.map(async testOrder => {
-    console.log(testOrder)
     return testOrderColRef2.add(testOrder)
   }))
 }
@@ -50,12 +48,10 @@ const addOrdersPer02 = async (testOrders: any[]) => {
 
   for (const testOrder of testOrders) {
     await sleep(0.2)
-    console.log(testOrder)
     await testOrderColRef.add(testOrder)
   }
   for (const testOrder of testOrders) {
     await sleep(0.2)
-    console.log(testOrder)
     await testOrderColRef2.add(testOrder)
   }
 }
