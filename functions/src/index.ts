@@ -24,10 +24,6 @@ export const createTestOrder = functions.firestore.document(`/version/1/testorde
   }
 })
 
-export const createTestOrder3 = functions.firestore.document(`/version/1/testorder/{testOrderID}`).onCreate(async event => {
-  console.log('log')
-})
-
 export const createTestOrder2 = functions.firestore.document(`/version/1/testorder2/{testOrderID}`).onCreate(async event => {
   try {
     const testOrderData = event.data.data()
