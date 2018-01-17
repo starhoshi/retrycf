@@ -33,55 +33,38 @@ export const createTestOrder2 = functions.firestore.document(`/version/1/testord
   return undefined
 })
 
+// const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
+//   for (const sku of skuRefs) {
+//     await admin.firestore().runTransaction(transaction => {
+//       return transaction.get(sku).then(skuDoc => {
+//         const newStock = skuDoc.data().stock - 1
+//         console.log(testOrderID, sku.id, newStock)
+//         transaction.update(sku, { stock: newStock })
+//       })
+//       .catch(e => {
+//         console.error(sku.id, e)
+//         throw e
+//       })
+//     })
+//   }
+// }
+
 const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
-  for (const sku of skuRefs) {
-    await admin.firestore().runTransaction(transaction => {
-      return transaction.get(sku).then(skuDoc => {
-        const newStock = skuDoc.data().stock - 1
-        console.log(testOrderID, sku.id, newStock)
-        transaction.update(sku, { stock: newStock })
-      })
-      .catch(e => {
-        console.error(sku.id, e)
-        throw e
-      })
-    })
-  }
-}
-
-const _decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
   await admin.firestore().runTransaction(async (transaction) => {
-
-    const hoge: any[] = []
-
+    const promises: Promise<any>[] = []
     try {
       for (const sku of skuRefs) {
-        const t = await transaction.get(sku)
-        const newStock = t.data().stock - 1
-        console.log(testOrderID, sku.id, newStock)
-        hoge.push({sku: sku,  stock: newStock })
+        const t = transaction.get(sku).then(tsku => {
+          const newStock = tsku.data().stock - 1
+          console.log(testOrderID, sku.id, newStock)
+          transaction.update(sku, { stock: newStock })
+        })
+        promises.push(t)
       }
     } catch (e) {
-      // console.error(sku.id, e)
+      console.error(testOrderID, e)
       throw e
     }
-      // await transaction.get(sku).then(skuDoc => {
-      //   const newStock = skuDoc.data().stock - 1
-      //   console.log(testOrderID, sku.id, newStock)
-      //   transaction.update(sku, { stock: newStock })
-      // })
-        // .catch(e => {
-        //   console.error(sku.id, e)
-        //   throw e
-        // })
-    // }
-
-    // const promise: Promise<any>[] = []
-    hoge.forEach(h => {
-      transaction.update(h.sku, {stock: h.stock})
-    })
-
-    return Promise.resolve()
-    // return Promise.all(promise)
+    return Promise.all(promises)
   })
 }
