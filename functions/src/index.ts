@@ -20,6 +20,7 @@ export const createTestOrder = functions.firestore.document(`/version/1/testorde
     console.log(testOrderID, 'finish')
     return undefined
   } catch (e) {
+    console.log('createTestOrder error', e)
     throw e
   }
 })
@@ -37,6 +38,7 @@ export const createTestOrder2 = functions.firestore.document(`/version/1/testord
     console.log(testOrderID, 'finish')
     return undefined
   } catch (e) {
+    console.log('createTestOrder2 error', e)
     throw e
   }
 })
@@ -44,18 +46,13 @@ export const createTestOrder2 = functions.firestore.document(`/version/1/testord
 const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
   return admin.firestore().runTransaction(async (transaction) => {
     const promises: Promise<any>[] = []
-    try {
-      for (const sku of skuRefs) {
-        const t = transaction.get(sku).then(tsku => {
-          const newStock = tsku.data().stock - 1
-          console.log(testOrderID, sku.id, newStock)
-          transaction.update(sku, { stock: newStock })
-        })
-        promises.push(t)
-      }
-    } catch (e) {
-      console.error(testOrderID, e)
-      throw e
+    for (const sku of skuRefs) {
+      const t = transaction.get(sku).then(tsku => {
+        const newStock = tsku.data().stock - 1
+        console.log(testOrderID, sku.id, newStock)
+        transaction.update(sku, { stock: newStock })
+      })
+      promises.push(t)
     }
     return Promise.all(promises)
   })
