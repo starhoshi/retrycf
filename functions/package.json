@@ -12,14 +12,14 @@
     "deploy": "tsc && firebase deploy --only functions"
   },
   "dependencies": {
-    "firebase-admin": "~5.4.2",
-    "firebase-functions": "^0.7.1"
+    "firebase-admin": "~5.8.1",
+    "firebase-functions": "^0.8.1"
   },
   "private": true,
   "main": "out/index.js",
   "devDependencies": {
     "@types/jest": "^22.0.0",
-    "jest": "^22.0.6",
+    "jest": "^22.1.4",
     "ts-jest": "^22.0.0",
     "tslint": "^5.9.1",
     "typescript": "^2.6.2"
