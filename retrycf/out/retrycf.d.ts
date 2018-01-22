@@ -1,5 +1,15 @@
 import * as functions from 'firebase-functions';
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
+import { INeoTask } from './retrycf';
+import { Pring } from 'pring';
+export declare class Failure extends Pring.Base {
+    ref: FirebaseFirestore.DocumentReference;
+    refPath: string;
+    neoTask: INeoTask;
+    static querySnapshot(refPath: string): Promise<FirebaseFirestore.QuerySnapshot>;
+    static setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask): Promise<FirebaseFirestore.WriteResult | FirebaseFirestore.WriteResult[]>;
+    static deleteFailure(ref: FirebaseFirestore.DocumentReference): Promise<void>;
+}
 export declare enum NeoTaskStatus {
     none = 0,
     success = 1,
