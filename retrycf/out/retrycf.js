@@ -40,11 +40,8 @@ class NeoTask {
             neoTask.status = NeoTaskStatus.failure;
             neoTask.retry.error.push(error.toString());
             neoTask.retry.count += 1; // これをトリガーにして再実行する
-            console.log(neoTask);
             yield event.data.ref.update({ neoTask: neoTask.rawValue() });
-            console.log('setFailure');
             yield failure_1.Failure.setFailure(event.data, neoTask.rawValue());
-            console.log('finFailure');
             return neoTask;
         });
     }

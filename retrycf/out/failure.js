@@ -25,7 +25,6 @@ class Failure extends pring_1.Pring.Base {
     static setFailure(documentSnapshot, neoTask) {
         return __awaiter(this, void 0, void 0, function* () {
             const querySnapshot = yield Failure.querySnapshot(documentSnapshot.ref.path);
-            console.log('failure');
             if (querySnapshot.docs.length === 0) {
                 const failure = new Failure();
                 // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
