@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions'
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
+import { Failure } from './failure'
 
 export enum NeoTaskStatus {
   none = 0,
@@ -34,7 +35,7 @@ export class NeoTask implements INeoTask {
     console.log(neoTask)
 
     await event.data.ref.update({ neoTask: neoTask.rawValue() })
-    // await Firebase.Failure.setFailure(event.data, neoTask.rawValue())
+    await Failure.setFailure(event.data, neoTask.rawValue())
 
     return neoTask
   }
@@ -63,7 +64,7 @@ export class NeoTask implements INeoTask {
     console.error('fatal_error', event.data.ref.id)
 
     await event.data.ref.update({ neoTask: neoTask.rawValue() })
-    // await Firebase.Failure.setFailure(event.data, neoTask.rawValue())
+    await Failure.setFailure(event.data, neoTask.rawValue())
 
     return neoTask
   }
@@ -116,7 +117,7 @@ export class NeoTask implements INeoTask {
   static async success(event: functions.Event<DeltaDocumentSnapshot>) {
     const neoTask: INeoTask = { status: NeoTaskStatus.success }
     await event.data.ref.update({ neoTask: neoTask })
-    // await Firebase.Failure.deleteFailure(event.data.ref)
+    await Failure.deleteFailure(event.data.ref)
   }
 
   constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot) {
