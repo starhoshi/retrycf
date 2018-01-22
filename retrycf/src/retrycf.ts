@@ -4,6 +4,8 @@ import * as admin from 'firebase-admin'
 import { INeoTask } from './retrycf'
 import { Pring, property } from 'pring'
 
+admin.initializeApp(<admin.AppOptions>functions.config().firebase)
+
 export class Failure extends Pring.Base {
   @property ref: FirebaseFirestore.DocumentReference
   @property refPath: string
