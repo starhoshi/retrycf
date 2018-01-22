@@ -8,6 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const failure_1 = require("./failure");
 var NeoTaskStatus;
 (function (NeoTaskStatus) {
     NeoTaskStatus[NeoTaskStatus["none"] = 0] = "none";
@@ -41,7 +42,7 @@ class NeoTask {
             neoTask.retry.count += 1; // これをトリガーにして再実行する
             console.log(neoTask);
             yield event.data.ref.update({ neoTask: neoTask.rawValue() });
-            // await Firebase.Failure.setFailure(event.data, neoTask.rawValue())
+            yield failure_1.Failure.setFailure(event.data, neoTask.rawValue());
             return neoTask;
         });
     }
@@ -65,7 +66,7 @@ class NeoTask {
             };
             console.error('fatal_error', event.data.ref.id);
             yield event.data.ref.update({ neoTask: neoTask.rawValue() });
-            // await Firebase.Failure.setFailure(event.data, neoTask.rawValue())
+            yield failure_1.Failure.setFailure(event.data, neoTask.rawValue());
             return neoTask;
         });
     }
@@ -109,7 +110,7 @@ class NeoTask {
         return __awaiter(this, void 0, void 0, function* () {
             const neoTask = { status: NeoTaskStatus.success };
             yield event.data.ref.update({ neoTask: neoTask });
-            // await Firebase.Failure.deleteFailure(event.data.ref)
+            yield failure_1.Failure.deleteFailure(event.data.ref);
         });
     }
     rawValue() {
