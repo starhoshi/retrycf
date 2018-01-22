@@ -21,6 +21,7 @@ var Retrycf;
 (function (Retrycf) {
     function initialize(options) {
         firestore = new FirebaseFirestore.Firestore(options);
+        pring_1.Pring.initialize(options);
     }
     Retrycf.initialize = initialize;
     class Failure extends pring_1.Pring.Base {

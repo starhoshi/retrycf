@@ -9,6 +9,7 @@ var firestore: FirebaseFirestore.Firestore
 export namespace Retrycf {
   export function initialize(options?: any) {
     firestore = new FirebaseFirestore.Firestore(options)
+    Pring.initialize(options)
   }
 
   export class Failure extends Pring.Base {
