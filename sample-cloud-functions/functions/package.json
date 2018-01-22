@@ -15,7 +15,7 @@
     "firebase-admin": "~5.8.1",
     "firebase-functions": "^0.8.1",
     "pring": "^0.4.1",
-    "retrycf": "^0.0.21"
+    "retrycf": "^0.0.22"
   },
   "private": true,
   "main": "out/index.js",
