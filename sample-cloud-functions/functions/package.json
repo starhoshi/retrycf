@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "firebase-admin": "~5.8.1",
-    "firebase-functions": "^0.8.1"
+    "firebase-functions": "^0.8.1",
+    "retrycf": "^0.0.1"
   },
   "private": true,
   "main": "out/index.js",
