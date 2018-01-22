@@ -9,9 +9,6 @@ var firestore: FirebaseFirestore.Firestore
 export namespace Retrycf {
   export function initialize(options?: any) {
     firestore = new FirebaseFirestore.Firestore(options)
-    // firestore = new functions.firestore.dat
-
-    console.log(firestore)
   }
 
   export class Failure extends Pring.Base {
@@ -20,7 +17,6 @@ export namespace Retrycf {
     @property neoTask: INeoTask
 
     static querySnapshot(refPath: string) {
-      console.log(admin)
       return firestore.collection('version/1/failure')
         .where('refPath', '==', refPath)
         .get()
@@ -48,10 +44,7 @@ export namespace Retrycf {
     }
 
     static async deleteFailure(ref: FirebaseFirestore.DocumentReference) {
-      console.log('start snapshot')
       const querySnapshot = await Failure.querySnapshot(ref.path)
-
-      console.log('deletefailure', querySnapshot.docs)
 
       for (const doc of querySnapshot.docs) {
         const failure = new Failure()
@@ -118,7 +111,7 @@ export namespace Retrycf {
         error: error.toString()
       }
 
-      console.error('fatal_error', event.data.ref.id)
+      console.log('fatal_error', event.data.ref.id)
 
       await event.data.ref.update({ neoTask: neoTask.rawValue() })
       await Failure.setFailure(event.data, neoTask.rawValue())
@@ -173,11 +166,8 @@ export namespace Retrycf {
 
     static async success(event: functions.Event<DeltaDocumentSnapshot>) {
       const neoTask: INeoTask = { status: NeoTaskStatus.success }
-      console.log('success', neoTask)
       await event.data.ref.update({ neoTask: neoTask })
-      console.log('success updated')
       await Failure.deleteFailure(event.data.ref)
-      console.log('delete failured')
     }
 
     constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot) {
