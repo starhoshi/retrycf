@@ -14,10 +14,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const pring_1 = require("pring");
-admin.initializeApp(functions.config().firebase);
 class Failure extends pring_1.Pring.Base {
     static querySnapshot(refPath) {
         console.log(admin);
