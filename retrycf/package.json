@@ -1,6 +1,6 @@
 {
   "name": "retrycf",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "retry cloud functions",
   "main": "out/retrycf.js",
   "types": "out/retrycf.d.ts",
