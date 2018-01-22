@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin'
+import { Retrycf } from 'retrycf'
 import 'jest'
 
 beforeAll(() => {
@@ -6,6 +7,12 @@ beforeAll(() => {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   })
+
+  Retrycf.initialize({
+    projectId: 'sandbox-329fc',
+    keyFilename: './sandbox-329fc-firebase-adminsdk.json'
+  })
+
 })
 
 it('order create', async () => {
@@ -18,14 +25,14 @@ it('order create', async () => {
     return admin.firestore().collection('version/1/testsku').add(data)
   }))
 
-  const testOrders = [...Array(40).keys()].map(a => {
-    const testOrder: any = {}
-    testOrder.orderSKUs = skus
-    return testOrder
-  })
+  // const testOrders = [...Array(40).keys()].map(a => {
+  //   const testOrder: any = {}
+  //   testOrder.orderSKUs = skus
+  //   return testOrder
+  // })
 
-  // await addOrdersPer02(testOrders)
-  await addOrdersAtOnce(testOrders)
+  // // await addOrdersPer02(testOrders)
+  // await addOrdersAtOnce(testOrders)
 
   expect(true)
 })

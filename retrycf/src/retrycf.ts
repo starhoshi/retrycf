@@ -1,4 +1,5 @@
 import * as functions from 'firebase-functions'
+import * as FirebaseFirestore from '@google-cloud/firestore'
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
 import * as admin from 'firebase-admin'
 import { Pring, property } from 'pring'
@@ -8,6 +9,9 @@ var firestore: FirebaseFirestore.Firestore
 export namespace Retrycf {
   export function initialize(options?: any) {
     firestore = new FirebaseFirestore.Firestore(options)
+    // firestore = new functions.firestore.dat
+
+    console.log(firestore)
   }
 
   export class Failure extends Pring.Base {

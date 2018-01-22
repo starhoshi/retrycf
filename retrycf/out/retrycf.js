@@ -14,6 +14,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const FirebaseFirestore = require("@google-cloud/firestore");
 const admin = require("firebase-admin");
 const pring_1 = require("pring");
 var firestore;
@@ -21,6 +22,8 @@ var Retrycf;
 (function (Retrycf) {
     function initialize(options) {
         firestore = new FirebaseFirestore.Firestore(options);
+        // firestore = new functions.firestore.dat
+        console.log(firestore);
     }
     Retrycf.initialize = initialize;
     class Failure extends pring_1.Pring.Base {

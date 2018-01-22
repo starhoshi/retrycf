@@ -1,4 +1,5 @@
 import * as functions from 'firebase-functions';
+import * as FirebaseFirestore from '@google-cloud/firestore';
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
 import { Pring } from 'pring';
 export declare namespace Retrycf {

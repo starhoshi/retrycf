@@ -1,6 +1,6 @@
 import * as functions from 'firebase-functions'
 import * as admin from 'firebase-admin'
-import { INeoTask, NeoTask } from 'retrycf'
+import { Retrycf } from 'retrycf'
 // import { INeoTask, NeoTask } from '../../../retrycf/src/retrycf'
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
 import { Pring } from 'pring'
@@ -18,7 +18,7 @@ export const createTestOrder = functions.firestore.document(`/version/1/testorde
     return undefined
   } catch (e) {
     console.log('createTestOrder error', e)
-    const neoTask = await NeoTask.setRetry(event, 'createTestOrder', e)
+    const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder', e)
     throw e
   }
 })
@@ -29,15 +29,15 @@ export const createTestOrder2 = functions.firestore.document(`/version/1/testord
     return undefined
   } catch (e) {
     console.log('createTestOrder2 error', e)
-    const neoTask = await NeoTask.setRetry(event, 'createTestOrder2', e)
+    const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder2', e)
     throw e
   }
 })
 
 export const updateTestOrder = functions.firestore.document(`/version/1/testorder/{testOrderID}`).onUpdate(async event => {
   try {
-    const shouldRetry = NeoTask.shouldRetry(event.data)
-    await NeoTask.setFatalIfRetryCountIsMax(event)
+    const shouldRetry = Retrycf.NeoTask.shouldRetry(event.data)
+    await Retrycf.NeoTask.setFatalIfRetryCountIsMax(event)
 
     console.log('shouldretry', shouldRetry)
 
@@ -49,15 +49,15 @@ export const updateTestOrder = functions.firestore.document(`/version/1/testorde
     return undefined
   } catch (e) {
     console.log('createTestOrder error', e)
-    const neoTask = await NeoTask.setRetry(event, 'createTestOrder', e)
+    const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder', e)
     throw e
   }
 })
 
 export const updateTestOrder2 = functions.firestore.document(`/version/1/testorder2/{testOrderID}`).onUpdate(async event => {
   try {
-    const shouldRetry = NeoTask.shouldRetry(event.data)
-    await NeoTask.setFatalIfRetryCountIsMax(event)
+    const shouldRetry = Retrycf.NeoTask.shouldRetry(event.data)
+    await Retrycf.NeoTask.setFatalIfRetryCountIsMax(event)
 
     console.log('shouldretry', shouldRetry)
 
@@ -69,7 +69,7 @@ export const updateTestOrder2 = functions.firestore.document(`/version/1/testord
     return undefined
   } catch (e) {
     console.log('createTestOrder2 error', e)
-    const neoTask = await NeoTask.setRetry(event, 'createTestOrder2', e)
+    const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder2', e)
     throw e
   }
 })
@@ -85,7 +85,7 @@ const main = async (event: functions.Event<DeltaDocumentSnapshot>) => {
 
   console.log(testOrderID, 'finish')
 
-  await NeoTask.success(event)
+  await Retrycf.NeoTask.success(event)
 }
 
 const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
