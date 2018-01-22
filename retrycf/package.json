@@ -6,7 +6,8 @@
   "types": "out/retrycf.d.ts",
   "scripts": {
     "test": "jest",
-    "build": "tslint -p tslint.json && tsc -d"
+    "build": "tslint -p tslint.json && tsc -d",
+    "publish": "build && npm version && git commit -am 'publish' && git push origin master && npm publish"
   },
   "repository": {
     "type": "git",
