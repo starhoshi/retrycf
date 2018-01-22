@@ -18,7 +18,7 @@
     "retrycf": "^0.0.16"
   },
   "private": true,
-  "main": "out/sample-cloud-functions/functions/src/index.js",
+  "main": "out/index.js",
   "devDependencies": {
     "@types/jest": "^22.0.0",
     "jest": "^22.1.4",
