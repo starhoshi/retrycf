@@ -9,6 +9,7 @@ export class Failure extends Pring.Base {
   @property neoTask: INeoTask
 
   static querySnapshot(refPath: string) {
+    console.log(admin)
     return admin.firestore().collection('version/1/failure')
       .where('refPath', '==', refPath)
       .get()

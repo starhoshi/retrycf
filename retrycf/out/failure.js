@@ -18,6 +18,7 @@ const admin = require("firebase-admin");
 const pring_1 = require("pring");
 class Failure extends pring_1.Pring.Base {
     static querySnapshot(refPath) {
+        console.log(admin);
         return admin.firestore().collection('version/1/failure')
             .where('refPath', '==', refPath)
             .get();
