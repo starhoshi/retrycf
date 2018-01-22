@@ -15,20 +15,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const FirebaseFirestore = require("@google-cloud/firestore");
-const admin = require("firebase-admin");
 const pring_1 = require("pring");
 var firestore;
 var Retrycf;
 (function (Retrycf) {
     function initialize(options) {
         firestore = new FirebaseFirestore.Firestore(options);
-        // firestore = new functions.firestore.dat
-        console.log(firestore);
     }
     Retrycf.initialize = initialize;
     class Failure extends pring_1.Pring.Base {
         static querySnapshot(refPath) {
-            console.log(admin);
             return firestore.collection('version/1/failure')
                 .where('refPath', '==', refPath)
                 .get();
@@ -57,9 +53,7 @@ var Retrycf;
         }
         static deleteFailure(ref) {
             return __awaiter(this, void 0, void 0, function* () {
-                console.log('start snapshot');
                 const querySnapshot = yield Failure.querySnapshot(ref.path);
-                console.log('deletefailure', querySnapshot.docs);
                 for (const doc of querySnapshot.docs) {
                     const failure = new Failure();
                     failure.init(doc);
@@ -132,7 +126,7 @@ var Retrycf;
                     step: step,
                     error: error.toString()
                 };
-                console.error('fatal_error', event.data.ref.id);
+                console.log('fatal_error', event.data.ref.id);
                 yield event.data.ref.update({ neoTask: neoTask.rawValue() });
                 yield Failure.setFailure(event.data, neoTask.rawValue());
                 return neoTask;
@@ -177,11 +171,8 @@ var Retrycf;
         static success(event) {
             return __awaiter(this, void 0, void 0, function* () {
                 const neoTask = { status: NeoTaskStatus.success };
-                console.log('success', neoTask);
                 yield event.data.ref.update({ neoTask: neoTask });
-                console.log('success updated');
                 yield Failure.deleteFailure(event.data.ref);
-                console.log('delete failured');
             });
         }
         rawValue() {
