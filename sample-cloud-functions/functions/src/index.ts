@@ -7,6 +7,7 @@ import { Pring } from 'pring'
 
 admin.initializeApp(<admin.AppOptions>functions.config().firebase)
 Pring.initialize(functions.config().firebase)
+Retrycf.initialize(functions.config().firebase)
 
 export const helloWorld = functions.https.onRequest((request, response) => {
   // response.send("Hello from Firebase!\n\n")

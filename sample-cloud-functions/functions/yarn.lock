@@ -3323,9 +3323,9 @@ retry-request@^3.0.0, retry-request@^3.3.1:
     request "^2.81.0"
     through2 "^2.0.0"
 
-retrycf@^0.0.19:
-  version "0.0.19"
-  resolved "https://registry.yarnpkg.com/retrycf/-/retrycf-0.0.19.tgz#92d3a6d769ad4f44720f9f9972a2ddb3c75892db"
+retrycf@^0.0.20:
+  version "0.0.20"
+  resolved "https://registry.yarnpkg.com/retrycf/-/retrycf-0.0.20.tgz#9617b47a181823ab11062ffa1e583eefeefac6d0"
   dependencies:
     firebase-admin "^5.8.1"
     firebase-functions "^0.8.1"
