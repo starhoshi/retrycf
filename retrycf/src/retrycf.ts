@@ -17,6 +17,8 @@ export namespace Retrycf {
     @property neoTask: INeoTask
 
     static querySnapshot(refPath: string) {
+      console.log(firestore)
+
       return firestore.collection('version/1/failure')
         .where('refPath', '==', refPath)
         .get()
