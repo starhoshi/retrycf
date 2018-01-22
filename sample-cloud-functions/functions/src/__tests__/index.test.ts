@@ -18,7 +18,7 @@ it('order create', async () => {
     return admin.firestore().collection('version/1/testsku').add(data)
   }))
 
-  const testOrders = [...Array(1).keys()].map(a => {
+  const testOrders = [...Array(45).keys()].map(a => {
     const testOrder: any = {}
     testOrder.orderSKUs = skus
     return testOrder
