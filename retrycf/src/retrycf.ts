@@ -35,7 +35,9 @@ export class NeoTask implements INeoTask {
     console.log(neoTask)
 
     await event.data.ref.update({ neoTask: neoTask.rawValue() })
+    console.log('setFailure')
     await Failure.setFailure(event.data, neoTask.rawValue())
+    console.log('finFailure')
 
     return neoTask
   }
