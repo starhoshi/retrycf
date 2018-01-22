@@ -1,13 +1,13 @@
 {
   "name": "retrycf",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "retry cloud functions",
   "main": "out/retrycf.js",
   "types": "out/retrycf.d.ts",
   "scripts": {
     "test": "jest",
     "build": "tslint -p tslint.json && tsc -d",
-    "publish": "yarn run build && npm version patch && git commit -am 'publish' && git push origin master && npm publish"
+    "patch": "yarn run build && npm version patch && git commit -am 'publish' && git push origin master"
   },
   "repository": {
     "type": "git",
