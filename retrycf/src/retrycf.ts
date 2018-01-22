@@ -114,8 +114,11 @@ export class NeoTask implements INeoTask {
 
   static async success(event: functions.Event<DeltaDocumentSnapshot>) {
     const neoTask: INeoTask = { status: NeoTaskStatus.success }
+    console.log('success', neoTask)
     await event.data.ref.update({ neoTask: neoTask })
+    console.log('success updated')
     await Failure.deleteFailure(event.data.ref)
+    console.log('delete failured')
   }
 
   constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot) {

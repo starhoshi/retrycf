@@ -38,6 +38,8 @@ export class Failure extends Pring.Base {
   static async deleteFailure(ref: FirebaseFirestore.DocumentReference) {
     const querySnapshot = await Failure.querySnapshot(ref.path)
 
+    console.log('deletefailure', querySnapshot.docs)
+
     for (const doc of querySnapshot.docs) {
       const failure = new Failure()
       failure.init(doc)

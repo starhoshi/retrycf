@@ -47,6 +47,7 @@ class Failure extends pring_1.Pring.Base {
     static deleteFailure(ref) {
         return __awaiter(this, void 0, void 0, function* () {
             const querySnapshot = yield Failure.querySnapshot(ref.path);
+            console.log('deletefailure', querySnapshot.docs);
             for (const doc of querySnapshot.docs) {
                 const failure = new Failure();
                 failure.init(doc);

@@ -108,8 +108,11 @@ class NeoTask {
     static success(event) {
         return __awaiter(this, void 0, void 0, function* () {
             const neoTask = { status: NeoTaskStatus.success };
+            console.log('success', neoTask);
             yield event.data.ref.update({ neoTask: neoTask });
+            console.log('success updated');
             yield failure_1.Failure.deleteFailure(event.data.ref);
+            console.log('delete failured');
         });
     }
     rawValue() {
