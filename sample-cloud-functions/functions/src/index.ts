@@ -84,6 +84,8 @@ const main = async (event: functions.Event<DeltaDocumentSnapshot>) => {
   // await throwErrorDecreaseStock(testOrderID, skus)
 
   console.log(testOrderID, 'finish')
+
+  await NeoTask.success(event)
 }
 
 const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
