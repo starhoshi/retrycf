@@ -32,12 +32,8 @@ export class NeoTask implements INeoTask {
     neoTask.retry.error.push(error.toString())
     neoTask.retry.count += 1 // これをトリガーにして再実行する
 
-    console.log(neoTask)
-
     await event.data.ref.update({ neoTask: neoTask.rawValue() })
-    console.log('setFailure')
     await Failure.setFailure(event.data, neoTask.rawValue())
-    console.log('finFailure')
 
     return neoTask
   }

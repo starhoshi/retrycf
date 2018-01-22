@@ -17,8 +17,6 @@ export class Failure extends Pring.Base {
   static async setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask) {
     const querySnapshot = await Failure.querySnapshot(documentSnapshot.ref.path)
 
-    console.log('failure')
-
     if (querySnapshot.docs.length === 0) {
       const failure = new Failure()
       // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
