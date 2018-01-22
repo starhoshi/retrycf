@@ -7,7 +7,7 @@
   "scripts": {
     "test": "jest",
     "build": "tslint -p tslint.json && tsc -d",
-    "publish": "yarn run build && npm version && git commit -am 'publish' && git push origin master && npm publish"
+    "publish": "yarn run build && npm version patch && git commit -am 'publish' && git push origin master && npm publish"
   },
   "repository": {
     "type": "git",
