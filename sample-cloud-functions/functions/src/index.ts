@@ -2,8 +2,10 @@ import * as functions from 'firebase-functions'
 import * as admin from 'firebase-admin'
 import { INeoTask, NeoTask } from 'retrycf'
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
+import { Pring } from 'pring'
 
 admin.initializeApp(<admin.AppOptions>functions.config().firebase)
+Pring.initialize(functions.config().firebase)
 
 export const helloWorld = functions.https.onRequest((request, response) => {
   // response.send("Hello from Firebase!\n\n")
