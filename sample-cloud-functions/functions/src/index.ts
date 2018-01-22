@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions'
 import * as admin from 'firebase-admin'
-import { INeoTask, NeoTask } from 'retrycf'
+// import { INeoTask, NeoTask } from 'retrycf'
+import { INeoTask, NeoTask } from '../../../retrycf/src/retrycf'
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
 import { Pring } from 'pring'
 
