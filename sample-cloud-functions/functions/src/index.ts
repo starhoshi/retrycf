@@ -14,6 +14,8 @@ export const helloWorld = functions.https.onRequest((request, response) => {
 })
 
 export const createTestOrder = functions.firestore.document(`/version/1/testorder/{testOrderID}`).onCreate(async event => {
+  // tran
+
   try {
     await main(event)
     return undefined
@@ -76,20 +78,22 @@ export const updateTestOrder2 = functions.firestore.document(`/version/1/testord
 })
 
 const main = async (event: functions.Event<DeltaDocumentSnapshot>) => {
+  console.log('eventID', event.eventId)
+  console.log('event', event)
   const testOrderData = event.data.data()
   const testOrderID = event.params!.testOrderID
   console.log(testOrderID, event.eventType, 'start')
 
   const skus = <FirebaseFirestore.DocumentReference[]>testOrderData.orderSKUs
-  // await decreaseStock(testOrderID, skus)
-  await throwErrorDecreaseStock(testOrderID, skus)
+  await decreaseStock(testOrderID, skus, event.data.ref)
+  // await throwErrorDecreaseStock(testOrderID, skus)
 
   console.log(testOrderID, 'finish')
 
   await Retrycf.NeoTask.success(event)
 }
 
-const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
+const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[], ref: FirebaseFirestore.DocumentReference) => {
   return admin.firestore().runTransaction(async (transaction) => {
     const promises: Promise<any>[] = []
     for (const sku of skuRefs) {
@@ -100,6 +104,17 @@ const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.Doc
       })
       promises.push(t)
     }
+
+    const flagTransaction = transaction.get(ref).then(tref => {
+      const flag = tref.data()!.flag
+      if (flag) {
+        throw 'duplicated'
+      } else {
+        transaction.update(ref, { flag: true })
+      }
+    })
+    promises.push(flagTransaction)
+
     return Promise.all(promises)
   })
 }
