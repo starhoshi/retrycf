@@ -81,8 +81,8 @@ const main = async (event: functions.Event<DeltaDocumentSnapshot>) => {
   console.log(testOrderID, event.eventType, 'start')
 
   const skus = <FirebaseFirestore.DocumentReference[]>testOrderData.orderSKUs
-  await decreaseStock(testOrderID, skus)
-  // await throwErrorDecreaseStock(testOrderID, skus)
+  // await decreaseStock(testOrderID, skus)
+  await throwErrorDecreaseStock(testOrderID, skus)
 
   console.log(testOrderID, 'finish')
 
