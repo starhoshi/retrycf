@@ -26,7 +26,6 @@ var Retrycf;
     Retrycf.initialize = initialize;
     class Failure extends pring_1.Pring.Base {
         static querySnapshot(refPath) {
-            console.log(firestore);
             return firestore.collection('version/1/failure')
                 .where('refPath', '==', refPath)
                 .get();
