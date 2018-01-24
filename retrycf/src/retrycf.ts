@@ -104,23 +104,20 @@ export namespace Retrycf {
         } else {
           const neoTask = new NeoTask(event.data)
           neoTask.completed[step] = true
-          console.log('will save data', event.data.data())
           transaction.update(event.data.ref, { neoTask: neoTask.rawValue() })
-          event.data.data().neoTask = neoTask.rawValue()
-          console.log('saved data', event.data.data())
         }
       })
     }
 
-    static async clearComplete(event: functions.Event<DeltaDocumentSnapshot>, step: string) {
+    static async clearComplete(event: functions.Event<DeltaDocumentSnapshot>) {
       const neoTask = new NeoTask(event.data)
       neoTask.completed = {}
       await event.data.ref.update({ neoTask: neoTask.rawValue() })
+      event.data.data().neoTask = neoTask.rawValue()
     }
 
     static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string) {
       const neoTask = new NeoTask(event.data)
-      console.log(!!neoTask.completed[step])
       return !!neoTask.completed[step]
     }
 
