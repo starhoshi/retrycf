@@ -53,7 +53,7 @@ export declare namespace Retrycf {
             error: string;
         };
         static markComplete(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string): Promise<void>;
-        static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string): Promise<boolean>;
+        static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string): boolean;
         static setRetry(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any): Promise<NeoTask>;
         static setInvalid(event: functions.Event<DeltaDocumentSnapshot>, error: ValidationError): Promise<NeoTask>;
         static setFatal(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any): Promise<NeoTask>;
