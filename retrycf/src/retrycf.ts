@@ -63,16 +63,39 @@ export namespace Retrycf {
 
   export interface INeoTask {
     status: NeoTaskStatus
+    completed: { [id: string]: boolean }
     invalid?: { validationError: string, reason: string }
     retry?: { error: any[], count: number }
     fatal?: { step: string, error: string }
   }
 
   export class NeoTask implements INeoTask {
-    status: NeoTaskStatus
+    status: NeoTaskStatus = NeoTaskStatus.none
+    completed: { [id: string]: boolean } = {}
     invalid?: { validationError: string, reason: string }
     retry?: { error: any[], count: number }
     fatal?: { step: string, error: string }
+
+    static async completeIfNotCompleted(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string) {
+      return transaction.get(event.data.ref).then(tref => {
+        const flag = tref.data()!.flag
+        if (NeoTask.isCompleted(event, step)) {
+          throw 'duplicated'
+        } else {
+          const neoTask = new NeoTask(event.data)
+          neoTask.completed[step] = true
+          console.log('will save data', event.data.data())
+          transaction.update(event.data.ref, { flag: true })
+          console.log('saved data', event.data.data())
+        }
+      })
+    }
+
+    static async isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string) {
+      const neoTask = new NeoTask(event.data)
+      console.log(!!neoTask.completed[step])
+      return !!neoTask.completed[step]
+    }
 
     static async setRetry(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any) {
       const neoTask = new NeoTask(event.data)
@@ -166,7 +189,7 @@ export namespace Retrycf {
     }
 
     static async success(event: functions.Event<DeltaDocumentSnapshot>) {
-      const neoTask: INeoTask = { status: NeoTaskStatus.success }
+      const neoTask: INeoTask = { status: NeoTaskStatus.success, completed: {} }
       await event.data.ref.update({ neoTask: neoTask })
       await Failure.deleteFailure(event.data.ref)
     }
@@ -182,7 +205,7 @@ export namespace Retrycf {
     }
 
     rawValue(): INeoTask {
-      const neoTask: INeoTask = { status: this.status }
+      const neoTask: INeoTask = { status: this.status, completed: {} }
       if (this.invalid) { neoTask.invalid = this.invalid }
       if (this.retry) { neoTask.retry = this.retry }
       if (this.fatal) { neoTask.fatal = this.fatal }

@@ -81,6 +81,8 @@ var Retrycf;
     })(NeoTaskStatus = Retrycf.NeoTaskStatus || (Retrycf.NeoTaskStatus = {}));
     class NeoTask {
         constructor(deltaDocumentSnapshot) {
+            this.status = NeoTaskStatus.none;
+            this.completed = {};
             this.status = NeoTaskStatus.failure;
             const neoTask = deltaDocumentSnapshot.data().neoTask;
             if (neoTask) {
@@ -94,6 +96,30 @@ var Retrycf;
                     this.fatal = neoTask.fatal;
                 }
             }
+        }
+        static completeIfNotCompleted(event, transaction, step) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return transaction.get(event.data.ref).then(tref => {
+                    const flag = tref.data().flag;
+                    if (NeoTask.isCompleted(event, step)) {
+                        throw 'duplicated';
+                    }
+                    else {
+                        const neoTask = new NeoTask(event.data);
+                        neoTask.completed[step] = true;
+                        console.log('will save data', event.data.data());
+                        transaction.update(event.data.ref, { flag: true });
+                        console.log('saved data', event.data.data());
+                    }
+                });
+            });
+        }
+        static isCompleted(event, step) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const neoTask = new NeoTask(event.data);
+                console.log(!!neoTask.completed[step]);
+                return !!neoTask.completed[step];
+            });
         }
         static setRetry(event, step, error) {
             return __awaiter(this, void 0, void 0, function* () {
@@ -171,13 +197,13 @@ var Retrycf;
         }
         static success(event) {
             return __awaiter(this, void 0, void 0, function* () {
-                const neoTask = { status: NeoTaskStatus.success };
+                const neoTask = { status: NeoTaskStatus.success, completed: {} };
                 yield event.data.ref.update({ neoTask: neoTask });
                 yield Failure.deleteFailure(event.data.ref);
             });
         }
         rawValue() {
-            const neoTask = { status: this.status };
+            const neoTask = { status: this.status, completed: {} };
             if (this.invalid) {
                 neoTask.invalid = this.invalid;
             }

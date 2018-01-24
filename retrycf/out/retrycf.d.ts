@@ -19,6 +19,9 @@ export declare namespace Retrycf {
     }
     interface INeoTask {
         status: NeoTaskStatus;
+        completed: {
+            [id: string]: boolean;
+        };
         invalid?: {
             validationError: string;
             reason: string;
@@ -34,6 +37,9 @@ export declare namespace Retrycf {
     }
     class NeoTask implements INeoTask {
         status: NeoTaskStatus;
+        completed: {
+            [id: string]: boolean;
+        };
         invalid?: {
             validationError: string;
             reason: string;
@@ -46,6 +52,8 @@ export declare namespace Retrycf {
             step: string;
             error: string;
         };
+        static completeIfNotCompleted(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string): Promise<void>;
+        static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string): Promise<boolean>;
         static setRetry(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any): Promise<NeoTask>;
         static setInvalid(event: functions.Event<DeltaDocumentSnapshot>, error: ValidationError): Promise<NeoTask>;
         static setFatal(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any): Promise<NeoTask>;
