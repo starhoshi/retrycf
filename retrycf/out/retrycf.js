@@ -122,10 +122,18 @@ var Retrycf;
                         const neoTask = new NeoTask(event.data);
                         neoTask.completed[step] = true;
                         console.log('will save data', event.data.data());
-                        transaction.update(event.data.ref, { flag: true });
+                        transaction.update(event.data.ref, { neoTask: neoTask.rawValue() });
+                        event.data.data().neoTask = neoTask.rawValue();
                         console.log('saved data', event.data.data());
                     }
                 });
+            });
+        }
+        static clearComplete(event, step) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const neoTask = new NeoTask(event.data);
+                neoTask.completed = {};
+                yield event.data.ref.update({ neoTask: neoTask.rawValue() });
             });
         }
         static isCompleted(event, step) {
