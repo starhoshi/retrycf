@@ -90,6 +90,7 @@ export namespace Retrycf {
     fatal?: { step: string, error: string }
   }
 
+  // TODO: Task を2回上書き保存した時に古いのが消える
   export class NeoTask implements INeoTask {
     status: NeoTaskStatus = NeoTaskStatus.none
     completed: { [id: string]: boolean } = {}
