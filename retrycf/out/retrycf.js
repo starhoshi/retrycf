@@ -101,6 +101,7 @@ var Retrycf;
             return __awaiter(this, void 0, void 0, function* () {
                 console.log('ref', event.data.ref);
                 return transaction.get(event.data.ref).then(tref => {
+                    console.log('completed', NeoTask.isCompleted(event, step));
                     if (NeoTask.isCompleted(event, step)) {
                         throw 'duplicated';
                     }

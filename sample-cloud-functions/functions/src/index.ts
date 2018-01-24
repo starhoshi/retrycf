@@ -83,8 +83,8 @@ const main = async (event: functions.Event<DeltaDocumentSnapshot>) => {
   console.log(testOrderID, event.eventType, 'start')
 
   const skus = <FirebaseFirestore.DocumentReference[]>testOrderData.orderSKUs
-  await decreaseStock(testOrderID, skus, event.data.ref)
-  // await throwErrorDecreaseStock(testOrderID, skus)
+  await decreaseStock(testOrderID, skus, event)
+  // await throwErrorDecreaseStock(testOrderID, skus, event)
 
   console.log(testOrderID, 'finish')
 
@@ -102,7 +102,7 @@ const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.Doc
       })
       promises.push(t)
     }
-    promises.push(Retrycf.NeoTask.completeIfNotCompleted(event, transaction, 'decreaseStock'))
+    promises.push(Retrycf.NeoTask.markComplete(event, transaction, 'decreaseStock'))
 
     return Promise.all(promises)
   })
