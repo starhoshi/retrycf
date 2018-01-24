@@ -76,9 +76,9 @@ export namespace Retrycf {
     retry?: { error: any[], count: number }
     fatal?: { step: string, error: string }
 
-    static async completeIfNotCompleted(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string) {
+    static async markComplete(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string) {
+      console.log('ref', event.data.ref)
       return transaction.get(event.data.ref).then(tref => {
-        const flag = tref.data()!.flag
         if (NeoTask.isCompleted(event, step)) {
           throw 'duplicated'
         } else {

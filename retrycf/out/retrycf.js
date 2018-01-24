@@ -97,10 +97,10 @@ var Retrycf;
                 }
             }
         }
-        static completeIfNotCompleted(event, transaction, step) {
+        static markComplete(event, transaction, step) {
             return __awaiter(this, void 0, void 0, function* () {
+                console.log('ref', event.data.ref);
                 return transaction.get(event.data.ref).then(tref => {
-                    const flag = tref.data().flag;
                     if (NeoTask.isCompleted(event, step)) {
                         throw 'duplicated';
                     }
