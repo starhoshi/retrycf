@@ -4,6 +4,16 @@ import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestor
 import { Pring } from 'pring';
 export declare namespace Retrycf {
     function initialize(options?: any): void;
+    class CompletedError extends Error {
+        step: string;
+        constructor(step: string);
+    }
+    class ValidationError extends Error {
+        validationErrorType: string;
+        reason: string;
+        option?: any;
+        constructor(validationErrorType: string, reason: string);
+    }
     class Failure extends Pring.Base {
         ref: FirebaseFirestore.DocumentReference;
         refPath: string;
@@ -64,11 +74,5 @@ export declare namespace Retrycf {
         static success(event: functions.Event<DeltaDocumentSnapshot>): Promise<void>;
         constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot);
         rawValue(): INeoTask;
-    }
-    class ValidationError extends Error {
-        validationErrorType: string;
-        reason: string;
-        option?: any;
-        constructor(validationErrorType: string, reason: string);
     }
 }

@@ -12,6 +12,27 @@ export namespace Retrycf {
     Pring.initialize(options)
   }
 
+  export class CompletedError extends Error {
+    step: string
+
+    constructor(step: string) {
+      super()
+      this.step = step
+    }
+  }
+
+  export class ValidationError extends Error {
+    validationErrorType: string
+    reason: string
+    option?: any
+
+    constructor(validationErrorType: string, reason: string) {
+      super()
+      this.validationErrorType = validationErrorType
+      this.reason = reason
+    }
+  }
+
   export class Failure extends Pring.Base {
     @property ref: FirebaseFirestore.DocumentReference
     @property refPath: string
@@ -209,27 +230,6 @@ export namespace Retrycf {
       if (this.retry) { neoTask.retry = this.retry }
       if (this.fatal) { neoTask.fatal = this.fatal }
       return neoTask
-    }
-  }
-
-  export class CompletedError extends Error {
-    step: string
-
-    constructor(step: string) {
-      super()
-      this.step = step
-    }
-  }
-
-  export class ValidationError extends Error {
-    validationErrorType: string
-    reason: string
-    option?: any
-
-    constructor(validationErrorType: string, reason: string) {
-      super()
-      this.validationErrorType = validationErrorType
-      this.reason = reason
     }
   }
 }

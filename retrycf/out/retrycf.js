@@ -24,6 +24,21 @@ var Retrycf;
         pring_1.Pring.initialize(options);
     }
     Retrycf.initialize = initialize;
+    class CompletedError extends Error {
+        constructor(step) {
+            super();
+            this.step = step;
+        }
+    }
+    Retrycf.CompletedError = CompletedError;
+    class ValidationError extends Error {
+        constructor(validationErrorType, reason) {
+            super();
+            this.validationErrorType = validationErrorType;
+            this.reason = reason;
+        }
+    }
+    Retrycf.ValidationError = ValidationError;
     class Failure extends pring_1.Pring.Base {
         static querySnapshot(refPath) {
             return firestore.collection('version/1/failure')
@@ -101,7 +116,7 @@ var Retrycf;
             return __awaiter(this, void 0, void 0, function* () {
                 return transaction.get(event.data.ref).then(tref => {
                     if (NeoTask.isCompleted(event, step)) {
-                        throw 'duplicated';
+                        throw new CompletedError(step);
                     }
                     else {
                         const neoTask = new NeoTask(event.data);
@@ -215,12 +230,4 @@ var Retrycf;
     }
     NeoTask.MAX_RETRY_COUNT = 3;
     Retrycf.NeoTask = NeoTask;
-    class ValidationError extends Error {
-        constructor(validationErrorType, reason) {
-            super();
-            this.validationErrorType = validationErrorType;
-            this.reason = reason;
-        }
-    }
-    Retrycf.ValidationError = ValidationError;
 })(Retrycf = exports.Retrycf || (exports.Retrycf = {}));
