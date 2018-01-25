@@ -114,8 +114,8 @@ var Retrycf;
             }
         }
         static markComplete(event, transaction, step) {
+            console.log('retrycf ref', event.data.ref);
             return __awaiter(this, void 0, void 0, function* () {
-                console.log('retrycf ref', event.data.ref);
                 return transaction.get(event.data.ref).then(tref => {
                     if (NeoTask.isCompleted(event, step)) {
                         throw new CompletedError(step);
