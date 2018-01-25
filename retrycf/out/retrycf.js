@@ -94,6 +94,7 @@ var Retrycf;
         NeoTaskStatus[NeoTaskStatus["success"] = 1] = "success";
         NeoTaskStatus[NeoTaskStatus["failure"] = 2] = "failure";
     })(NeoTaskStatus = Retrycf.NeoTaskStatus || (Retrycf.NeoTaskStatus = {}));
+    // TODO: Task を2回上書き保存した時に古いのが消える
     class NeoTask {
         constructor(deltaDocumentSnapshot) {
             this.status = NeoTaskStatus.none;
@@ -114,6 +115,7 @@ var Retrycf;
         }
         static markComplete(event, transaction, step) {
             return __awaiter(this, void 0, void 0, function* () {
+                console.log('retrycf ref', event.data.ref);
                 return transaction.get(event.data.ref).then(tref => {
                     if (NeoTask.isCompleted(event, step)) {
                         throw new CompletedError(step);

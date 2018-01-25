@@ -99,6 +99,7 @@ export namespace Retrycf {
     fatal?: { step: string, error: string }
 
     static async markComplete(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string) {
+      console.log('retrycf ref', event.data.ref)
       return transaction.get(event.data.ref).then(tref => {
         if (NeoTask.isCompleted(event, step)) {
           throw new CompletedError(step)
