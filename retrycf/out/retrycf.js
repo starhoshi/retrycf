@@ -114,16 +114,17 @@ var Retrycf;
             }
         }
         static markComplete(event, transaction, step) {
-            console.log('retrycf ref', event.data.ref);
             return __awaiter(this, void 0, void 0, function* () {
-                return transaction.get(event.data.ref).then(tref => {
+                const ref = firestore.doc(event.data.ref.path);
+                console.log('retrycf ref', ref);
+                return transaction.get(ref).then(tref => {
                     if (NeoTask.isCompleted(event, step)) {
                         throw new CompletedError(step);
                     }
                     else {
                         const neoTask = new NeoTask(event.data);
                         neoTask.completed[step] = true;
-                        transaction.update(event.data.ref, { neoTask: neoTask.rawValue() });
+                        transaction.update(ref, { neoTask: neoTask.rawValue() });
                     }
                 });
             });
