@@ -19,7 +19,7 @@ export declare namespace Retrycf {
         refPath: string;
         neoTask: INeoTask;
         static querySnapshot(refPath: string): Promise<FirebaseFirestore.QuerySnapshot>;
-        static setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask): Promise<FirebaseFirestore.WriteResult | FirebaseFirestore.WriteResult[]>;
+        static setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask): Promise<FirebaseFirestore.WriteResult[]>;
         static deleteFailure(ref: FirebaseFirestore.DocumentReference): Promise<void>;
     }
     enum NeoTaskStatus {
