@@ -122,7 +122,7 @@ export class PNeoTask extends Pring.Base {
     return !!model.neoTask.completed[step]
   }
 
-  static async makeNeoTask<T extends HasNeoTask>(model: T) {
+  static makeNeoTask<T extends HasNeoTask>(model: T) {
     let neoTask = new PNeoTask()
     if (model.neoTask) {
       if (model.neoTask.status) { neoTask.status = model.neoTask.status }
@@ -135,7 +135,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static async setRetry<T extends HasNeoTask>(model: T, step: string, error: any) {
-    let neoTask = await PNeoTask.makeNeoTask(model)
+    let neoTask = PNeoTask.makeNeoTask(model)
 
     if (!neoTask.retry) {
       neoTask.retry = { error: new Array(), count: 0 }
@@ -154,7 +154,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static async setInvalid<T extends HasNeoTask>(model: T, error: ValidationError) {
-    let neoTask = await PNeoTask.makeNeoTask(model)
+    let neoTask = PNeoTask.makeNeoTask(model)
 
     neoTask.status = NeoTaskStatus.failure
     neoTask.invalid = {
@@ -170,7 +170,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static async setFatal<T extends HasNeoTask>(model: T, step: string, error: any) {
-    let neoTask = await PNeoTask.makeNeoTask(model)
+    let neoTask = PNeoTask.makeNeoTask(model)
 
     neoTask.status = NeoTaskStatus.failure
     neoTask.fatal = {
@@ -186,6 +186,15 @@ export class PNeoTask extends Pring.Base {
     return model
   }
 
+  static getRetryCount<T extends HasNeoTask>(model: T): number | undefined {
+    let neoTask = PNeoTask.makeNeoTask(model)
+
+    if (!neoTask.retry) {
+      return undefined
+    }
+
+    return neoTask.retry.count
+  }
 }
 
 export interface INeoTask {
