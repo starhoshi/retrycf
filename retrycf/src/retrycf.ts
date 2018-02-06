@@ -152,6 +152,22 @@ export class PNeoTask extends Pring.Base {
 
     return model
   }
+
+  static async setInvalid<T extends HasNeoTask>(model: T, error: ValidationError) {
+    let neoTask = await PNeoTask.makeNeoTask(model)
+
+    neoTask.status = NeoTaskStatus.failure
+    neoTask.invalid = {
+      validationError: error.validationErrorType,
+      reason: error.reason
+    }
+
+    await model.reference.update({ neoTask: neoTask.rawValue() })
+
+    model.neoTask = neoTask.rawValue()
+
+    return model
+  }
 }
 
 export interface INeoTask {

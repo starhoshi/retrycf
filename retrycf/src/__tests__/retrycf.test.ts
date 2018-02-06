@@ -122,3 +122,27 @@ describe('setRetry', async () => {
     })
   })
 })
+
+describe('setInvalid', async () => {
+  let order: Model.SampleOrder
+  beforeEach(async () => {
+    order = new Model.SampleOrder()
+    order.name = ''
+    await order.save()
+  })
+
+  test('set invalid', async () => {
+    order.neoTask = undefined
+
+    const validationError = new Retrycf.ValidationError('errortype', 'reason')
+    const updatedOrder = await Retrycf.PNeoTask.setInvalid(order, validationError)
+    expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
+    expect(updatedOrder.neoTask!.invalid!.validationError).toEqual('errortype')
+    expect(updatedOrder.neoTask!.invalid!.reason).toEqual('reason')
+
+    const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
+    expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
+    expect(updatedOrder.neoTask!.invalid!.validationError).toEqual('errortype')
+    expect(updatedOrder.neoTask!.invalid!.reason).toEqual('reason')
+  })
+})
