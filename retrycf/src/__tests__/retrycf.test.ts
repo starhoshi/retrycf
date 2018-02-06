@@ -79,12 +79,22 @@ describe('setRetry', async () => {
     test('retry added and count is 1', async () => {
       order.neoTask = undefined
       const updatedOrder = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+      expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
       expect(updatedOrder.neoTask!.retry!.error).toEqual(['error'])
       expect(updatedOrder.neoTask!.retry!.count).toEqual(1)
 
       const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
+      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
       expect(fetchedOrder.neoTask!.retry!.error).toEqual(['error'])
       expect(fetchedOrder.neoTask!.retry!.count).toEqual(1)
+
+      // check Failure
+      const failures = await Retrycf.Failure.querySnapshot(fetchedOrder.reference.path)
+      expect(failures.docs.length).toEqual(1)
+      const failure = new Retrycf.Failure()
+      failure.init(failures.docs[0])
+      expect(failure.refPath).toEqual(fetchedOrder.reference.path)
+      expect(failure.neoTask.status).toEqual(fetchedOrder.neoTask!.status)
     })
   })
 
@@ -92,31 +102,23 @@ describe('setRetry', async () => {
     test('count is 2', async () => {
       order.neoTask = undefined
       const updated1Order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error1')
-      const updated2Order = await Retrycf.PNeoTask.setRetry(updated1Order, 'step', 'error2')
+      const updated2Order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error2')
+      expect(updated2Order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
       expect(updated2Order.neoTask!.retry!.error).toEqual(['error1', 'error2'])
       expect(updated2Order.neoTask!.retry!.count).toEqual(2)
 
       const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
+      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
       expect(fetchedOrder.neoTask!.retry!.error).toEqual(['error1', 'error2'])
       expect(fetchedOrder.neoTask!.retry!.count).toEqual(2)
+
+      // check Failure
+      const failures = await Retrycf.Failure.querySnapshot(fetchedOrder.reference.path)
+      expect(failures.docs.length).toEqual(1)
+      const failure = new Retrycf.Failure()
+      failure.init(failures.docs[0])
+      expect(failure.refPath).toEqual(fetchedOrder.reference.path)
+      expect(failure.neoTask.status).toEqual(fetchedOrder.neoTask!.status)
     })
-  })
-
-  test('false when step is not completed', async () => {
-    const completed = { 'other': true }
-    const neoTask = new Retrycf.PNeoTask()
-    neoTask.completed = completed
-    order.neoTask = neoTask.rawValue()
-
-    expect(Retrycf.PNeoTask.isCompleted(order, 'step')).toEqual(false)
-  })
-
-  test('true when step is completed', async () => {
-    const completed = { [step]: true }
-    const neoTask = new Retrycf.PNeoTask()
-    neoTask.completed = completed
-    order.neoTask = neoTask.rawValue()
-
-    expect(Retrycf.PNeoTask.isCompleted(order, 'step')).toEqual(true)
   })
 })
