@@ -99,9 +99,14 @@ var Retrycf;
         constructor(deltaDocumentSnapshot) {
             this.status = NeoTaskStatus.none;
             this.completed = {};
-            this.status = NeoTaskStatus.failure;
             const neoTask = deltaDocumentSnapshot.data().neoTask;
             if (neoTask) {
+                if (neoTask.status) {
+                    this.status = neoTask.status;
+                }
+                if (neoTask.completed) {
+                    this.completed = neoTask.completed;
+                }
                 if (neoTask.invalid) {
                     this.invalid = neoTask.invalid;
                 }
