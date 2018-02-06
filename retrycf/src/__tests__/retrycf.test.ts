@@ -13,7 +13,6 @@ const step = 'step'
 describe('clearCompleted', () => {
   test('clear', async () => {
     let order = new Model.SampleOrder()
-    order.name = ''
     const neoTask = new Retrycf.PNeoTask()
     const completed = { [step]: true }
     neoTask.completed = completed
@@ -35,7 +34,6 @@ describe('isCompleted', async () => {
   let order: Model.SampleOrder
   beforeEach(async () => {
     order = new Model.SampleOrder()
-    order.name = ''
   })
   describe('when neoTask is undefined', () => {
     test('false', async () => {
@@ -71,7 +69,6 @@ describe('setRetry', async () => {
   let order: Model.SampleOrder
   beforeEach(async () => {
     order = new Model.SampleOrder()
-    order.name = ''
     await order.save()
   })
 
@@ -127,7 +124,6 @@ describe('setInvalid', async () => {
   let order: Model.SampleOrder
   beforeEach(async () => {
     order = new Model.SampleOrder()
-    order.name = ''
     await order.save()
   })
 
@@ -151,7 +147,6 @@ describe('setRetry', async () => {
   let order: Model.SampleOrder
   beforeEach(async () => {
     order = new Model.SampleOrder()
-    order.name = ''
     await order.save()
   })
 
