@@ -82,7 +82,24 @@ export enum NeoTaskStatus {
 }
 
 export interface HasNeoTask extends Pring.Base {
-  neoTask: INeoTask
+  neoTask?: PNeoTask
+}
+
+export class PNeoTask extends Pring.Base {
+  @property status?: NeoTaskStatus
+  @property completed?: { [id: string]: boolean }
+  @property invalid?: { validationError: string, reason: string }
+  @property retry?: { error: any[], count: number }
+  @property fatal?: { step: string, error: string }
+
+  static async clearCompleted<T extends HasNeoTask>(model: T) {
+    if (!model.neoTask) { return model }
+    if (!model.neoTask.completed) { return model }
+
+    model.neoTask.completed = {}
+    await model.reference.update({ neoTask: { completed: {} } })
+    return model
+  }
 }
 
 export interface INeoTask {
