@@ -43,14 +43,14 @@ export class Failure extends Pring.Base {
       .get()
   }
 
-  static async setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask) {
-    const querySnapshot = await Failure.querySnapshot(documentSnapshot.ref.path)
+  static async setFailure<T extends HasNeoTask>(model: T, neoTask: INeoTask) {
+    const querySnapshot = await Failure.querySnapshot(model.reference.path)
 
     if (querySnapshot.docs.length === 0) {
       const failure = new Failure()
       // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
       // failure.ref = documentSnapshot.ref
-      failure.refPath = documentSnapshot.ref.path
+      failure.refPath = model.reference.path
       failure.neoTask = neoTask
       return failure.save()
     } else {
@@ -58,7 +58,7 @@ export class Failure extends Pring.Base {
       failure.init(querySnapshot.docs[0])
       // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
       // failure.ref = documentSnapshot.ref
-      failure.refPath = documentSnapshot.ref.path
+      failure.refPath = model.reference.path
       failure.neoTask = neoTask
       return failure.update()
     }
@@ -118,7 +118,39 @@ export class PNeoTask extends Pring.Base {
   static isCompleted<T extends HasNeoTask>(model: T, step: string) {
     if (!model.neoTask) { return false }
     if (!model.neoTask.completed) { return false }
+
     return !!model.neoTask.completed[step]
+  }
+
+  static async makeNeoTask<T extends HasNeoTask>(model: T) {
+    let neoTask = new PNeoTask()
+    if (model.neoTask) {
+      if (model.neoTask.status) { neoTask.status = model.neoTask.status }
+      if (model.neoTask.completed) { neoTask.completed = model.neoTask.completed }
+      if (model.neoTask.invalid) { neoTask.invalid = model.neoTask.invalid }
+      if (model.neoTask.retry) { neoTask.retry = model.neoTask.retry }
+      if (model.neoTask.fatal) { neoTask.fatal = model.neoTask.fatal }
+    }
+    return neoTask
+  }
+
+  static async setRetry<T extends HasNeoTask>(model: T, step: string, error: any) {
+    let neoTask = await PNeoTask.makeNeoTask(model)
+
+    if (!neoTask.retry) {
+      neoTask.retry = { error: new Array(), count: 0 }
+    }
+
+    neoTask.status = NeoTaskStatus.failure
+    neoTask.retry.error.push(error.toString())
+    neoTask.retry.count += 1 // これをトリガーにして再実行する
+
+    await model.reference.update({ neoTask: neoTask.rawValue() })
+    await Failure.setFailure(model, neoTask.rawValue())
+
+    model.neoTask = neoTask.rawValue()
+
+    return model
   }
 }
 
@@ -176,7 +208,7 @@ export class NeoTask implements INeoTask {
     neoTask.retry.count += 1 // これをトリガーにして再実行する
 
     await event.data.ref.update({ neoTask: neoTask.rawValue() })
-    await Failure.setFailure(event.data, neoTask.rawValue())
+    // await Failure.setFailure(event.data, neoTask.rawValue())
 
     return neoTask
   }
@@ -205,7 +237,7 @@ export class NeoTask implements INeoTask {
     console.log('fatal_error', event.data.ref.id)
 
     await event.data.ref.update({ neoTask: neoTask.rawValue() })
-    await Failure.setFailure(event.data, neoTask.rawValue())
+    // await Failure.setFailure(event.data, neoTask.rawValue())
 
     return neoTask
   }

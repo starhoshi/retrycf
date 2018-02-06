@@ -16,6 +16,11 @@ export class Firebase {
         credential: admin.credential.cert(serviceAccount)
       })
 
+      Retrycf.initialize({
+        projectId: 'sandbox-329fc',
+        keyFilename: '../sandbox-329fc-firebase-adminsdk.json'
+      })
+
       Pring.initialize({
         projectId: 'sandbox-329fc',
         keyFilename: '../sandbox-329fc-firebase-adminsdk.json'
