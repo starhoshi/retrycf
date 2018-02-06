@@ -64,8 +64,8 @@ export class Failure extends Pring.Base {
     }
   }
 
-  static async deleteFailure(ref: FirebaseFirestore.DocumentReference) {
-    const querySnapshot = await Failure.querySnapshot(ref.path)
+  static async deleteFailure<T extends HasNeoTask>(model: T) {
+    const querySnapshot = await Failure.querySnapshot(model.reference.path)
 
     for (const doc of querySnapshot.docs) {
       const failure = new Failure()
@@ -230,6 +230,18 @@ export class PNeoTask extends Pring.Base {
     }
   }
 
+  static async setSuccess<T extends HasNeoTask>(model: T) {
+    let neoTask = new PNeoTask()
+    neoTask.status = NeoTaskStatus.success
+    if (model.neoTask && model.neoTask.completed) { neoTask.completed = model.neoTask.completed }
+
+    await model.reference.update({ neoTask: neoTask.rawValue() })
+    await Failure.deleteFailure(model)
+
+    model.neoTask = neoTask.rawValue()
+
+    return model
+  }
 }
 
 export interface INeoTask {

@@ -4,6 +4,7 @@ import * as Helper from './firebaseHelper'
 import * as Model from './sampleModel'
 import 'jest'
 
+jest.setTimeout(20000)
 beforeAll(() => {
   const _ = Helper.Firebase.shared
 })
@@ -291,8 +292,6 @@ describe('getRetryCount', async () => {
 })
 
 describe('setFatalIfRetryCountIsMax', async () => {
-  jest.setTimeout(20000)
-
   let order: Model.SampleOrder
   let preOrder: Model.SampleOrder
   beforeEach(async () => {
@@ -396,6 +395,45 @@ describe('setFatalIfRetryCountIsMax', async () => {
         failure.init(failures.docs[0])
         expect(failure.neoTask.fatal).toBeUndefined()
       })
+    })
+  })
+})
+
+describe('setSuccess', async () => {
+  let order: Model.SampleOrder
+  beforeEach(async () => {
+    order = new Model.SampleOrder()
+    await order.save()
+  })
+
+  describe('failure exists', () => {
+    test('failure deleted', async () => {
+      order.neoTask = undefined
+      order = await Retrycf.PNeoTask.setFatal(order, 'step', 'error')
+      expect(order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
+      let failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+      expect(failures.docs.length).toEqual(1)
+
+      order = await Retrycf.PNeoTask.setSuccess(order)
+      expect(order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
+
+      const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
+      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
+
+      // check Failure deleted
+      failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+      expect(failures.docs.length).toEqual(0)
+    })
+  })
+
+  describe('failure not exists', () => {
+    test('success', async () => {
+      order.neoTask = undefined
+      order = await Retrycf.PNeoTask.setSuccess(order)
+      expect(order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
+
+      const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
+      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
     })
   })
 })
