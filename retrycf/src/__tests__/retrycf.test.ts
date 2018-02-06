@@ -290,3 +290,112 @@ describe('getRetryCount', async () => {
   })
 })
 
+describe('setFatalIfRetryCountIsMax', async () => {
+  jest.setTimeout(20000)
+
+  let order: Model.SampleOrder
+  let preOrder: Model.SampleOrder
+  beforeEach(async () => {
+    order = new Model.SampleOrder()
+    preOrder = new Model.SampleOrder()
+    await order.save()
+    await preOrder.save()
+  })
+
+  describe('current retry count is undefined', () => {
+    test('failure not set', async () => {
+      order.neoTask = undefined
+
+      await Retrycf.PNeoTask.setFatalIfRetryCountIsMax(order, undefined)
+      const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+      expect(failures.docs.length).toEqual(0)
+    })
+  })
+
+  describe('current and previous retry count is undefined', () => {
+    test('failure not set', async () => {
+      order.neoTask = undefined
+      preOrder.neoTask = undefined
+
+      await Retrycf.PNeoTask.setFatalIfRetryCountIsMax(order, preOrder)
+      const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+      expect(failures.docs.length).toEqual(0)
+    })
+  })
+
+  describe('only previous retry count is undefined', () => {
+    test('fatal not set', async () => {
+      order.neoTask = undefined
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+      preOrder.neoTask = undefined
+
+      await Retrycf.PNeoTask.setFatalIfRetryCountIsMax(order, preOrder)
+
+      const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+      const failure = new Retrycf.Failure()
+      failure.init(failures.docs[0])
+      expect(failure.neoTask.fatal).toBeUndefined()
+    })
+  })
+
+  describe('both current and previous are not undefined', () => {
+    describe('current retry count is over MAX', () => {
+      describe('current retry count > prevous retry count', () => {
+        test('fatal set', async () => {
+          order.neoTask = undefined
+          order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+          order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+          order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+          order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+          preOrder.neoTask = undefined
+          preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+          preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+          preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+
+          await Retrycf.PNeoTask.setFatalIfRetryCountIsMax(order, preOrder)
+
+          const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+          const failure = new Retrycf.Failure()
+          failure.init(failures.docs[0])
+
+          expect(failure.neoTask.fatal!.step).toEqual('retry_failed')
+          expect(failure.neoTask.fatal!.error).toEqual('retry failed')
+        })
+      })
+
+      describe('current retry count < prevous retry count', () => {
+        test('fatal not set', async () => {
+          order.neoTask = undefined
+          order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+          preOrder.neoTask = undefined
+          preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+          preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+
+          await Retrycf.PNeoTask.setFatalIfRetryCountIsMax(order, preOrder)
+
+          const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+          const failure = new Retrycf.Failure()
+          failure.init(failures.docs[0])
+          expect(failure.neoTask.fatal).toBeUndefined()
+        })
+      })
+    })
+
+    describe('current retry count is under MAX', () => {
+      test('fatal not set', async () => {
+        order.neoTask = undefined
+        order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+        order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+        preOrder.neoTask = undefined
+        preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+
+        await Retrycf.PNeoTask.setFatalIfRetryCountIsMax(order, preOrder)
+
+        const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
+        const failure = new Retrycf.Failure()
+        failure.init(failures.docs[0])
+        expect(failure.neoTask.fatal).toBeUndefined()
+      })
+    })
+  })
+})

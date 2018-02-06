@@ -218,6 +218,18 @@ export class PNeoTask extends Pring.Base {
     // retry count が前回から変更されていたら retry する
     return currentRetryCount > previousRetryCount
   }
+
+  static async setFatalIfRetryCountIsMax<T extends HasNeoTask>(model: T, previoudModel?: T) {
+    const currentRetryCount = PNeoTask.getRetryCount(model)
+    const previousRetryCount = previoudModel && PNeoTask.getRetryCount(previoudModel)
+
+    if (currentRetryCount && previousRetryCount) {
+      if (currentRetryCount >= PNeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
+        await PNeoTask.setFatal(model, 'retry_failed', 'retry failed')
+      }
+    }
+  }
+
 }
 
 export interface INeoTask {
