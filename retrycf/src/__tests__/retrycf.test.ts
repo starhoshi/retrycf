@@ -201,7 +201,7 @@ describe('setFatal', async () => {
   })
 })
 
-describe('sgetRetryCount', async () => {
+describe('getRetryCount', async () => {
   let order: Model.SampleOrder
   beforeEach(async () => {
     order = new Model.SampleOrder()
@@ -223,3 +223,70 @@ describe('sgetRetryCount', async () => {
     })
   })
 })
+
+describe('getRetryCount', async () => {
+  let order: Model.SampleOrder
+  let preOrder: Model.SampleOrder
+  beforeEach(async () => {
+    order = new Model.SampleOrder()
+    preOrder = new Model.SampleOrder()
+    await order.save()
+    await preOrder.save()
+  })
+
+  describe('current order retry count is undefined', () => {
+    test('false', async () => {
+      order.neoTask = undefined
+
+      expect(Retrycf.PNeoTask.shouldRetry(order, undefined)).toEqual(false)
+    })
+  })
+
+  describe('current order retry count is over 3', () => {
+    test('false', async () => {
+      order.neoTask = undefined
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+
+      expect(Retrycf.PNeoTask.shouldRetry(order, undefined)).toEqual(false)
+    })
+  })
+
+  describe('current order retry count is under 2 and previous count is undefined', () => {
+    test('true', async () => {
+      order.neoTask = undefined
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+
+      expect(Retrycf.PNeoTask.shouldRetry(order, undefined)).toEqual(true)
+    })
+  })
+
+  describe('current order retry count is 2 and previous count is 1', () => {
+    test('true', async () => {
+      order.neoTask = undefined
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+
+      preOrder.neoTask = undefined
+      preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+
+      expect(Retrycf.PNeoTask.shouldRetry(order, preOrder)).toEqual(true)
+    })
+  })
+
+  describe('current order retry count is 1 and previous count is 2', () => {
+    test('false', async () => {
+      order.neoTask = undefined
+      order = await Retrycf.PNeoTask.setRetry(order, 'step', 'error')
+
+      preOrder.neoTask = undefined
+      preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+      preOrder = await Retrycf.PNeoTask.setRetry(preOrder, 'step', 'error')
+
+      expect(Retrycf.PNeoTask.shouldRetry(order, preOrder)).toEqual(false)
+    })
+  })
+})
+

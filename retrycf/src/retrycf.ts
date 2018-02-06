@@ -195,6 +195,29 @@ export class PNeoTask extends Pring.Base {
 
     return neoTask.retry.count
   }
+
+  private static MAX_RETRY_COUNT = 3
+  static shouldRetry<T extends HasNeoTask>(model: T, previoudModel?: T): boolean {
+    const currentRetryCount = PNeoTask.getRetryCount(model)
+    const previousRetryCount = previoudModel && PNeoTask.getRetryCount(previoudModel)
+
+    if (!currentRetryCount) {
+      return false
+    }
+
+    // リトライカウントが3回以上だったら retry しない
+    if (currentRetryCount >= PNeoTask.MAX_RETRY_COUNT) {
+      return false
+    }
+
+    // リトライカウントがあるけど previous にはない
+    if (!previousRetryCount) {
+      return true // 新しく retry が生成されたということになるので true
+    }
+
+    // retry count が前回から変更されていたら retry する
+    return currentRetryCount > previousRetryCount
+  }
 }
 
 export interface INeoTask {
