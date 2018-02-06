@@ -43,15 +43,15 @@ class Failure extends pring_1.Pring.Base {
             .where('refPath', '==', refPath)
             .get();
     }
-    static setFailure(documentSnapshot, neoTask) {
+    static setFailure(model, neoTask) {
         return __awaiter(this, void 0, void 0, function* () {
-            const querySnapshot = yield Failure.querySnapshot(documentSnapshot.ref.path);
+            const querySnapshot = yield Failure.querySnapshot(model.reference.path);
             if (querySnapshot.docs.length === 0) {
                 const failure = new Failure();
                 // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
                 // failure.ref = documentSnapshot.ref
-                failure.refPath = documentSnapshot.ref.path;
-                failure.neoTask = neoTask;
+                failure.refPath = model.reference.path;
+                failure.neoTask = neoTask.rawValue();
                 return failure.save();
             }
             else {
@@ -59,15 +59,15 @@ class Failure extends pring_1.Pring.Base {
                 failure.init(querySnapshot.docs[0]);
                 // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
                 // failure.ref = documentSnapshot.ref
-                failure.refPath = documentSnapshot.ref.path;
-                failure.neoTask = neoTask;
+                failure.refPath = model.reference.path;
+                failure.neoTask = neoTask.rawValue();
                 return failure.update();
             }
         });
     }
-    static deleteFailure(ref) {
+    static deleteFailure(model) {
         return __awaiter(this, void 0, void 0, function* () {
-            const querySnapshot = yield Failure.querySnapshot(ref.path);
+            const querySnapshot = yield Failure.querySnapshot(model.reference.path);
             for (const doc of querySnapshot.docs) {
                 const failure = new Failure();
                 failure.init(doc);
@@ -92,117 +92,102 @@ var NeoTaskStatus;
     NeoTaskStatus[NeoTaskStatus["success"] = 1] = "success";
     NeoTaskStatus[NeoTaskStatus["failure"] = 2] = "failure";
 })(NeoTaskStatus = exports.NeoTaskStatus || (exports.NeoTaskStatus = {}));
-class Sample extends pring_1.Pring.Base {
-}
-__decorate([
-    pring_1.property
-], Sample.prototype, "neoTask", void 0);
-class PNeoTask extends pring_1.Pring.Base {
-}
-__decorate([
-    pring_1.property
-], PNeoTask.prototype, "hoge", void 0);
-// TODO: Task を2回上書き保存した時に古いのが消える
-class NeoTask {
-    constructor(deltaDocumentSnapshot) {
-        this.status = NeoTaskStatus.none;
-        this.completed = {};
-        const neoTask = deltaDocumentSnapshot.data().neoTask;
-        if (neoTask) {
-            if (neoTask.status) {
-                this.status = neoTask.status;
+class NeoTask extends pring_1.Pring.Base {
+    static clearCompleted(model) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!model.neoTask) {
+                return model;
             }
-            if (neoTask.completed) {
-                this.completed = neoTask.completed;
+            if (!model.neoTask.completed) {
+                return model;
             }
-            if (neoTask.invalid) {
-                this.invalid = neoTask.invalid;
+            model.neoTask.completed = {};
+            yield model.reference.update({ neoTask: { completed: {} } });
+            return model;
+        });
+    }
+    static isCompleted(model, step) {
+        if (!model.neoTask) {
+            return false;
+        }
+        if (!model.neoTask.completed) {
+            return false;
+        }
+        return !!model.neoTask.completed[step];
+    }
+    static makeNeoTask(model) {
+        let neoTask = new NeoTask();
+        if (model.neoTask) {
+            if (model.neoTask.status) {
+                neoTask.status = model.neoTask.status;
             }
-            if (neoTask.retry) {
-                this.retry = neoTask.retry;
+            if (model.neoTask.completed) {
+                neoTask.completed = model.neoTask.completed;
             }
-            if (neoTask.fatal) {
-                this.fatal = neoTask.fatal;
+            if (model.neoTask.invalid) {
+                neoTask.invalid = model.neoTask.invalid;
+            }
+            if (model.neoTask.retry) {
+                neoTask.retry = model.neoTask.retry;
+            }
+            if (model.neoTask.fatal) {
+                neoTask.fatal = model.neoTask.fatal;
             }
         }
+        return neoTask;
     }
-    static markComplete(event, transaction, step) {
+    static setRetry(model, step, error) {
         return __awaiter(this, void 0, void 0, function* () {
-            const ref = firestore.doc(event.data.ref.path);
-            console.log('retrycf ref', ref);
-            return transaction.get(ref).then(tref => {
-                if (NeoTask.isCompleted(event, step)) {
-                    throw new CompletedError(step);
-                }
-                else {
-                    const neoTask = new NeoTask(event.data);
-                    neoTask.completed[step] = true;
-                    transaction.update(ref, { neoTask: neoTask.rawValue() });
-                }
-            });
-        });
-    }
-    static clearComplete(event) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const neoTask = new NeoTask(event.data);
-            neoTask.completed = {};
-            yield event.data.ref.update({ neoTask: neoTask.rawValue() });
-            event.data.data().neoTask = neoTask.rawValue();
-        });
-    }
-    static isCompleted(event, step) {
-        const neoTask = new NeoTask(event.data);
-        return !!neoTask.completed[step];
-    }
-    static setRetry(event, step, error) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const neoTask = new NeoTask(event.data);
+            let neoTask = NeoTask.makeNeoTask(model);
             if (!neoTask.retry) {
                 neoTask.retry = { error: new Array(), count: 0 };
             }
             neoTask.status = NeoTaskStatus.failure;
             neoTask.retry.error.push(error.toString());
             neoTask.retry.count += 1; // これをトリガーにして再実行する
-            yield event.data.ref.update({ neoTask: neoTask.rawValue() });
-            yield Failure.setFailure(event.data, neoTask.rawValue());
-            return neoTask;
+            yield model.reference.update({ neoTask: neoTask.rawValue() });
+            yield Failure.setFailure(model, neoTask);
+            model.neoTask = neoTask.rawValue();
+            return model;
         });
     }
-    static setInvalid(event, error) {
+    static setInvalid(model, error) {
         return __awaiter(this, void 0, void 0, function* () {
-            const neoTask = new NeoTask(event.data);
+            let neoTask = NeoTask.makeNeoTask(model);
+            neoTask.status = NeoTaskStatus.failure;
             neoTask.invalid = {
                 validationError: error.validationErrorType,
                 reason: error.reason
             };
-            yield event.data.ref.update({ neoTask: neoTask.rawValue() });
-            return neoTask;
+            yield model.reference.update({ neoTask: neoTask.rawValue() });
+            model.neoTask = neoTask.rawValue();
+            return model;
         });
     }
-    static setFatal(event, step, error) {
+    static setFatal(model, step, error) {
         return __awaiter(this, void 0, void 0, function* () {
-            const neoTask = new NeoTask(event.data);
+            let neoTask = NeoTask.makeNeoTask(model);
+            neoTask.status = NeoTaskStatus.failure;
             neoTask.fatal = {
                 step: step,
                 error: error.toString()
             };
-            console.log('fatal_error', event.data.ref.id);
-            yield event.data.ref.update({ neoTask: neoTask.rawValue() });
-            yield Failure.setFailure(event.data, neoTask.rawValue());
-            return neoTask;
+            yield model.reference.update({ neoTask: neoTask.rawValue() });
+            yield Failure.setFailure(model, neoTask);
+            model.neoTask = neoTask.rawValue();
+            return model;
         });
     }
-    static getRetryCount(data) {
-        const snapshotData = data.data();
-        const currentNeoTask = snapshotData && snapshotData.neoTask;
-        if (!(currentNeoTask && currentNeoTask.retry && currentNeoTask.retry.count)) {
+    static getRetryCount(model) {
+        let neoTask = NeoTask.makeNeoTask(model);
+        if (!neoTask.retry) {
             return undefined;
         }
-        return currentNeoTask.retry.count;
+        return neoTask.retry.count;
     }
-    static shouldRetry(data) {
-        const currentRetryCount = NeoTask.getRetryCount(data);
-        const previousRetryCount = data.previous && NeoTask.getRetryCount(data.previous);
+    static shouldRetry(model, previoudModel) {
+        const currentRetryCount = NeoTask.getRetryCount(model);
+        const previousRetryCount = previoudModel && NeoTask.getRetryCount(previoudModel);
         if (!currentRetryCount) {
             return false;
         }
@@ -217,37 +202,172 @@ class NeoTask {
         // retry count が前回から変更されていたら retry する
         return currentRetryCount > previousRetryCount;
     }
-    static setFatalIfRetryCountIsMax(event) {
+    static setFatalIfRetryCountIsMax(model, previoudModel) {
         return __awaiter(this, void 0, void 0, function* () {
-            const currentRetryCount = NeoTask.getRetryCount(event.data);
-            const previousRetryCount = event.data.previous && NeoTask.getRetryCount(event.data.previous);
+            const currentRetryCount = NeoTask.getRetryCount(model);
+            const previousRetryCount = previoudModel && NeoTask.getRetryCount(previoudModel);
             if (currentRetryCount && previousRetryCount) {
                 if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
-                    return NeoTask.setFatal(event, 'retry_failed', 'retry failed');
+                    yield NeoTask.setFatal(model, 'retry_failed', 'retry failed');
                 }
             }
         });
     }
-    static success(event) {
+    static setSuccess(model) {
         return __awaiter(this, void 0, void 0, function* () {
-            const neoTask = { status: NeoTaskStatus.success, completed: {} };
-            yield event.data.ref.update({ neoTask: neoTask });
-            yield Failure.deleteFailure(event.data.ref);
+            let neoTask = new NeoTask();
+            neoTask.status = NeoTaskStatus.success;
+            if (model.neoTask && model.neoTask.completed) {
+                neoTask.completed = model.neoTask.completed;
+            }
+            yield model.reference.update({ neoTask: neoTask.rawValue() });
+            yield Failure.deleteFailure(model);
+            model.neoTask = neoTask.rawValue();
+            return model;
         });
-    }
-    rawValue() {
-        const neoTask = { status: this.status, completed: {} };
-        if (this.invalid) {
-            neoTask.invalid = this.invalid;
-        }
-        if (this.retry) {
-            neoTask.retry = this.retry;
-        }
-        if (this.fatal) {
-            neoTask.fatal = this.fatal;
-        }
-        return neoTask;
     }
 }
 NeoTask.MAX_RETRY_COUNT = 3;
+__decorate([
+    pring_1.property
+], NeoTask.prototype, "status", void 0);
+__decorate([
+    pring_1.property
+], NeoTask.prototype, "completed", void 0);
+__decorate([
+    pring_1.property
+], NeoTask.prototype, "invalid", void 0);
+__decorate([
+    pring_1.property
+], NeoTask.prototype, "retry", void 0);
+__decorate([
+    pring_1.property
+], NeoTask.prototype, "fatal", void 0);
 exports.NeoTask = NeoTask;
+// export interface INeoTask {
+//   status: NeoTaskStatus
+//   completed: { [id: string]: boolean }
+//   invalid?: { validationError: string, reason: string }
+//   retry?: { error: any[], count: number }
+//   fatal?: { step: string, error: string }
+// }
+// // TODO: Task を2回上書き保存した時に古いのが消える
+// export class NeoTask implements INeoTask {
+//   status: NeoTaskStatus = NeoTaskStatus.none
+//   completed: { [id: string]: boolean } = {}
+//   invalid?: { validationError: string, reason: string }
+//   retry?: { error: any[], count: number }
+//   fatal?: { step: string, error: string }
+//   static async markComplete(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string) {
+//     const ref = firestore.doc(event.data.ref.path)
+//     console.log('retrycf ref', ref)
+//     return transaction.get(ref).then(tref => {
+//       if (NeoTask.isCompleted(event, step)) {
+//         throw new CompletedError(step)
+//       } else {
+//         const neoTask = new NeoTask(event.data)
+//         neoTask.completed[step] = true
+//         transaction.update(ref, { neoTask: neoTask.rawValue() })
+//       }
+//     })
+//   }
+//   static async clearComplete(event: functions.Event<DeltaDocumentSnapshot>) {
+//     const neoTask = new NeoTask(event.data)
+//     neoTask.completed = {}
+//     await event.data.ref.update({ neoTask: neoTask.rawValue() })
+//     event.data.data().neoTask = neoTask.rawValue()
+//   }
+//   static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string) {
+//     const neoTask = new NeoTask(event.data)
+//     return !!neoTask.completed[step]
+//   }
+//   static async setRetry(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any) {
+//     const neoTask = new NeoTask(event.data)
+//     if (!neoTask.retry) {
+//       neoTask.retry = { error: new Array(), count: 0 }
+//     }
+//     neoTask.status = NeoTaskStatus.failure
+//     neoTask.retry.error.push(error.toString())
+//     neoTask.retry.count += 1 // これをトリガーにして再実行する
+//     await event.data.ref.update({ neoTask: neoTask.rawValue() })
+//     // await Failure.setFailure(event.data, neoTask.rawValue())
+//     return neoTask
+//   }
+//   static async setInvalid(event: functions.Event<DeltaDocumentSnapshot>, error: ValidationError) {
+//     const neoTask = new NeoTask(event.data)
+//     neoTask.invalid = {
+//       validationError: error.validationErrorType,
+//       reason: error.reason
+//     }
+//     await event.data.ref.update({ neoTask: neoTask.rawValue() })
+//     return neoTask
+//   }
+//   static async setFatal(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any) {
+//     const neoTask = new NeoTask(event.data)
+//     neoTask.fatal = {
+//       step: step,
+//       error: error.toString()
+//     }
+//     console.log('fatal_error', event.data.ref.id)
+//     await event.data.ref.update({ neoTask: neoTask.rawValue() })
+//     // await Failure.setFailure(event.data, neoTask.rawValue())
+//     return neoTask
+//   }
+//   private static getRetryCount(data: DeltaDocumentSnapshot): number | undefined {
+//     const snapshotData = data.data()
+//     const currentNeoTask = snapshotData && <INeoTask>snapshotData.neoTask
+//     if (!(currentNeoTask && currentNeoTask.retry && currentNeoTask.retry.count)) {
+//       return undefined
+//     }
+//     return currentNeoTask.retry.count
+//   }
+//   private static MAX_RETRY_COUNT = 3
+//   static shouldRetry(data: DeltaDocumentSnapshot): boolean {
+//     const currentRetryCount = NeoTask.getRetryCount(data)
+//     const previousRetryCount = data.previous && NeoTask.getRetryCount(data.previous)
+//     if (!currentRetryCount) {
+//       return false
+//     }
+//     // リトライカウントが3回以上だったら retry しない
+//     if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT) {
+//       return false
+//     }
+//     // リトライカウントがあるけど previous にはない
+//     if (!previousRetryCount) {
+//       return true // 新しく retry が生成されたということになるので true
+//     }
+//     // retry count が前回から変更されていたら retry する
+//     return currentRetryCount > previousRetryCount
+//   }
+//   static async setFatalIfRetryCountIsMax(event: functions.Event<DeltaDocumentSnapshot>) {
+//     const currentRetryCount = NeoTask.getRetryCount(event.data)
+//     const previousRetryCount = event.data.previous && NeoTask.getRetryCount(event.data.previous)
+//     if (currentRetryCount && previousRetryCount) {
+//       if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
+//         return NeoTask.setFatal(event, 'retry_failed', 'retry failed')
+//       }
+//     }
+//   }
+//   static async success(event: functions.Event<DeltaDocumentSnapshot>) {
+//     const neoTask: INeoTask = { status: NeoTaskStatus.success, completed: {} }
+//     await event.data.ref.update({ neoTask: neoTask })
+//     await Failure.deleteFailure(event.data.ref)
+//   }
+//   constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot) {
+//     const neoTask = deltaDocumentSnapshot.data().neoTask
+//     if (neoTask) {
+//       if (neoTask.status) { this.status = neoTask.status }
+//       if (neoTask.completed) { this.completed = neoTask.completed }
+//       if (neoTask.invalid) { this.invalid = neoTask.invalid }
+//       if (neoTask.retry) { this.retry = neoTask.retry }
+//       if (neoTask.fatal) { this.fatal = neoTask.fatal }
+//     }
+//   }
+//   rawValue(): INeoTask {
+//     const neoTask: INeoTask = { status: this.status, completed: {} }
+//     if (this.invalid) { neoTask.invalid = this.invalid }
+//     if (this.retry) { neoTask.retry = this.retry }
+//     if (this.fatal) { neoTask.fatal = this.fatal }
+//     return neoTask
+//   }
+// }

@@ -1,6 +1,4 @@
-import * as functions from 'firebase-functions';
 import * as FirebaseFirestore from '@google-cloud/firestore';
-import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
 import { Pring } from 'pring';
 export declare function initialize(options?: any): void;
 export declare class CompletedError extends Error {
@@ -13,13 +11,13 @@ export declare class ValidationError extends Error {
     option?: any;
     constructor(validationErrorType: string, reason: string);
 }
-export declare class Failure extends Pring.Base {
+export declare class Failure<T extends HasNeoTask> extends Pring.Base {
     ref: FirebaseFirestore.DocumentReference;
     refPath: string;
-    neoTask: INeoTask;
+    neoTask: NeoTask;
     static querySnapshot(refPath: string): Promise<FirebaseFirestore.QuerySnapshot>;
-    static setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask): Promise<FirebaseFirestore.WriteResult[]>;
-    static deleteFailure(ref: FirebaseFirestore.DocumentReference): Promise<void>;
+    static setFailure<T extends HasNeoTask>(model: T, neoTask: NeoTask): Promise<FirebaseFirestore.WriteResult[]>;
+    static deleteFailure<T extends HasNeoTask>(model: T): Promise<void>;
 }
 export declare enum NeoTaskStatus {
     none = 0,
@@ -27,11 +25,11 @@ export declare enum NeoTaskStatus {
     failure = 2,
 }
 export interface HasNeoTask extends Pring.Base {
-    neoTask: INeoTask;
+    neoTask?: NeoTask;
 }
-export interface INeoTask {
-    status: NeoTaskStatus;
-    completed: {
+export declare class NeoTask extends Pring.Base {
+    status?: NeoTaskStatus;
+    completed?: {
         [id: string]: boolean;
     };
     invalid?: {
@@ -46,35 +44,15 @@ export interface INeoTask {
         step: string;
         error: string;
     };
-}
-export declare class NeoTask implements INeoTask {
-    status: NeoTaskStatus;
-    completed: {
-        [id: string]: boolean;
-    };
-    invalid?: {
-        validationError: string;
-        reason: string;
-    };
-    retry?: {
-        error: any[];
-        count: number;
-    };
-    fatal?: {
-        step: string;
-        error: string;
-    };
-    static markComplete(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string): Promise<void>;
-    static clearComplete(event: functions.Event<DeltaDocumentSnapshot>): Promise<void>;
-    static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string): boolean;
-    static setRetry(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any): Promise<NeoTask>;
-    static setInvalid(event: functions.Event<DeltaDocumentSnapshot>, error: ValidationError): Promise<NeoTask>;
-    static setFatal(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any): Promise<NeoTask>;
-    private static getRetryCount(data);
+    static clearCompleted<T extends HasNeoTask>(model: T): Promise<T>;
+    static isCompleted<T extends HasNeoTask>(model: T, step: string): boolean;
+    static makeNeoTask<T extends HasNeoTask>(model: T): NeoTask;
+    static setRetry<T extends HasNeoTask>(model: T, step: string, error: any): Promise<T>;
+    static setInvalid<T extends HasNeoTask>(model: T, error: ValidationError): Promise<T>;
+    static setFatal<T extends HasNeoTask>(model: T, step: string, error: any): Promise<T>;
+    static getRetryCount<T extends HasNeoTask>(model: T): number | undefined;
     private static MAX_RETRY_COUNT;
-    static shouldRetry(data: DeltaDocumentSnapshot): boolean;
-    static setFatalIfRetryCountIsMax(event: functions.Event<DeltaDocumentSnapshot>): Promise<NeoTask | undefined>;
-    static success(event: functions.Event<DeltaDocumentSnapshot>): Promise<void>;
-    constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot);
-    rawValue(): INeoTask;
+    static shouldRetry<T extends HasNeoTask>(model: T, previoudModel?: T): boolean;
+    static setFatalIfRetryCountIsMax<T extends HasNeoTask>(model: T, previoudModel?: T): Promise<void>;
+    static setSuccess<T extends HasNeoTask>(model: T): Promise<T>;
 }
