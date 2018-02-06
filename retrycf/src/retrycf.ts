@@ -92,6 +92,20 @@ export class PNeoTask extends Pring.Base {
   @property retry?: { error: any[], count: number }
   @property fatal?: { step: string, error: string }
 
+  // static async markComplete<T extends HasNeoTask>(model: T, transaction: FirebaseFirestore.Transaction, step: string) {
+  //   const ref = firestore.doc(event.data.ref.path)
+  //   console.log('retrycf ref', ref)
+  //   return transaction.get(ref).then(tref => {
+  //     if (NeoTask.isCompleted(event, step)) {
+  //       throw new CompletedError(step)
+  //     } else {
+  //       const neoTask = new NeoTask(event.data)
+  //       neoTask.completed[step] = true
+  //       transaction.update(ref, { neoTask: neoTask.rawValue() })
+  //     }
+  //   })
+  // }
+
   static async clearCompleted<T extends HasNeoTask>(model: T) {
     if (!model.neoTask) { return model }
     if (!model.neoTask.completed) { return model }
@@ -99,6 +113,12 @@ export class PNeoTask extends Pring.Base {
     model.neoTask.completed = {}
     await model.reference.update({ neoTask: { completed: {} } })
     return model
+  }
+
+  static isCompleted<T extends HasNeoTask>(model: T, step: string) {
+    if (!model.neoTask) { return false }
+    if (!model.neoTask.completed) { return false }
+    return !!model.neoTask.completed[step]
   }
 }
 
