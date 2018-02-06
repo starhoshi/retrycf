@@ -168,6 +168,24 @@ export class PNeoTask extends Pring.Base {
 
     return model
   }
+
+  static async setFatal<T extends HasNeoTask>(model: T, step: string, error: any) {
+    let neoTask = await PNeoTask.makeNeoTask(model)
+
+    neoTask.status = NeoTaskStatus.failure
+    neoTask.fatal = {
+      step: step,
+      error: error.toString()
+    }
+
+    await model.reference.update({ neoTask: neoTask.rawValue() })
+    await Failure.setFailure(model, neoTask.rawValue())
+
+    model.neoTask = neoTask.rawValue()
+
+    return model
+  }
+
 }
 
 export interface INeoTask {

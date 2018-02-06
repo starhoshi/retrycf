@@ -146,3 +146,33 @@ describe('setInvalid', async () => {
     expect(updatedOrder.neoTask!.invalid!.reason).toEqual('reason')
   })
 })
+
+describe('setRetry', async () => {
+  let order: Model.SampleOrder
+  beforeEach(async () => {
+    order = new Model.SampleOrder()
+    order.name = ''
+    await order.save()
+  })
+
+  test('set fatal', async () => {
+    order.neoTask = undefined
+    const updatedOrder = await Retrycf.PNeoTask.setFatal(order, 'step', 'error')
+    expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
+    expect(updatedOrder.neoTask!.fatal!.error).toEqual('error')
+    expect(updatedOrder.neoTask!.fatal!.step).toEqual('step')
+
+    const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
+    expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
+    expect(fetchedOrder.neoTask!.fatal!.error).toEqual('error')
+    expect(fetchedOrder.neoTask!.fatal!.step).toEqual('step')
+
+    // check Failure
+    const failures = await Retrycf.Failure.querySnapshot(fetchedOrder.reference.path)
+    expect(failures.docs.length).toEqual(1)
+    const failure = new Retrycf.Failure()
+    failure.init(failures.docs[0])
+    expect(failure.refPath).toEqual(fetchedOrder.reference.path)
+    expect(failure.neoTask.status).toEqual(fetchedOrder.neoTask!.status)
+  })
+})
