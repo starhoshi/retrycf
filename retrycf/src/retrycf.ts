@@ -35,7 +35,7 @@ export class ValidationError extends Error {
 export class Failure<T extends HasNeoTask> extends Pring.Base {
   @property ref: FirebaseFirestore.DocumentReference
   @property refPath: string
-  @property neoTask: T
+  @property neoTask: NeoTask
 
   static querySnapshot(refPath: string) {
     return firestore.collection('version/1/failure')
@@ -43,7 +43,7 @@ export class Failure<T extends HasNeoTask> extends Pring.Base {
       .get()
   }
 
-  static async setFailure<T extends HasNeoTask>(model: T, neoTask: PNeoTask) {
+  static async setFailure<T extends HasNeoTask>(model: T, neoTask: NeoTask) {
     const querySnapshot = await Failure.querySnapshot(model.reference.path)
 
     if (querySnapshot.docs.length === 0) {
@@ -82,10 +82,10 @@ export enum NeoTaskStatus {
 }
 
 export interface HasNeoTask extends Pring.Base {
-  neoTask?: PNeoTask
+  neoTask?: NeoTask
 }
 
-export class PNeoTask extends Pring.Base {
+export class NeoTask extends Pring.Base {
   @property status?: NeoTaskStatus
   @property completed?: { [id: string]: boolean }
   @property invalid?: { validationError: string, reason: string }
@@ -109,7 +109,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static makeNeoTask<T extends HasNeoTask>(model: T) {
-    let neoTask = new PNeoTask()
+    let neoTask = new NeoTask()
     if (model.neoTask) {
       if (model.neoTask.status) { neoTask.status = model.neoTask.status }
       if (model.neoTask.completed) { neoTask.completed = model.neoTask.completed }
@@ -121,7 +121,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static async setRetry<T extends HasNeoTask>(model: T, step: string, error: any) {
-    let neoTask = PNeoTask.makeNeoTask(model)
+    let neoTask = NeoTask.makeNeoTask(model)
 
     if (!neoTask.retry) {
       neoTask.retry = { error: new Array(), count: 0 }
@@ -140,7 +140,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static async setInvalid<T extends HasNeoTask>(model: T, error: ValidationError) {
-    let neoTask = PNeoTask.makeNeoTask(model)
+    let neoTask = NeoTask.makeNeoTask(model)
 
     neoTask.status = NeoTaskStatus.failure
     neoTask.invalid = {
@@ -156,7 +156,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static async setFatal<T extends HasNeoTask>(model: T, step: string, error: any) {
-    let neoTask = PNeoTask.makeNeoTask(model)
+    let neoTask = NeoTask.makeNeoTask(model)
 
     neoTask.status = NeoTaskStatus.failure
     neoTask.fatal = {
@@ -173,7 +173,7 @@ export class PNeoTask extends Pring.Base {
   }
 
   static getRetryCount<T extends HasNeoTask>(model: T): number | undefined {
-    let neoTask = PNeoTask.makeNeoTask(model)
+    let neoTask = NeoTask.makeNeoTask(model)
 
     if (!neoTask.retry) {
       return undefined
@@ -184,15 +184,15 @@ export class PNeoTask extends Pring.Base {
 
   private static MAX_RETRY_COUNT = 3
   static shouldRetry<T extends HasNeoTask>(model: T, previoudModel?: T): boolean {
-    const currentRetryCount = PNeoTask.getRetryCount(model)
-    const previousRetryCount = previoudModel && PNeoTask.getRetryCount(previoudModel)
+    const currentRetryCount = NeoTask.getRetryCount(model)
+    const previousRetryCount = previoudModel && NeoTask.getRetryCount(previoudModel)
 
     if (!currentRetryCount) {
       return false
     }
 
     // リトライカウントが3回以上だったら retry しない
-    if (currentRetryCount >= PNeoTask.MAX_RETRY_COUNT) {
+    if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT) {
       return false
     }
 
@@ -206,18 +206,18 @@ export class PNeoTask extends Pring.Base {
   }
 
   static async setFatalIfRetryCountIsMax<T extends HasNeoTask>(model: T, previoudModel?: T) {
-    const currentRetryCount = PNeoTask.getRetryCount(model)
-    const previousRetryCount = previoudModel && PNeoTask.getRetryCount(previoudModel)
+    const currentRetryCount = NeoTask.getRetryCount(model)
+    const previousRetryCount = previoudModel && NeoTask.getRetryCount(previoudModel)
 
     if (currentRetryCount && previousRetryCount) {
-      if (currentRetryCount >= PNeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
-        await PNeoTask.setFatal(model, 'retry_failed', 'retry failed')
+      if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
+        await NeoTask.setFatal(model, 'retry_failed', 'retry failed')
       }
     }
   }
 
   static async setSuccess<T extends HasNeoTask>(model: T) {
-    let neoTask = new PNeoTask()
+    let neoTask = new NeoTask()
     neoTask.status = NeoTaskStatus.success
     if (model.neoTask && model.neoTask.completed) { neoTask.completed = model.neoTask.completed }
 
