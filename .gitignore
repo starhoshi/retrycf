@@ -95,3 +95,7 @@ sandbox-329fc-firebase-adminsdk.json
 .runtimeconfig.json
 firebase-debug.log
 sample-cloud-functions/functions/out
+
+# Test
+retrycf/out/__tests__
+.envrc

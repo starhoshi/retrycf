@@ -6,238 +6,240 @@ import { Pring, property } from 'pring'
 
 var firestore: FirebaseFirestore.Firestore
 
-export namespace Retrycf {
-  export function initialize(options?: any) {
-    firestore = new FirebaseFirestore.Firestore(options)
-    Pring.initialize(options)
+export function initialize(options?: any) {
+  firestore = new FirebaseFirestore.Firestore(options)
+  Pring.initialize(options)
+}
+
+export class CompletedError extends Error {
+  step: string
+
+  constructor(step: string) {
+    super()
+    this.step = step
+  }
+}
+
+export class ValidationError extends Error {
+  validationErrorType: string
+  reason: string
+  option?: any
+
+  constructor(validationErrorType: string, reason: string) {
+    super()
+    this.validationErrorType = validationErrorType
+    this.reason = reason
+  }
+}
+
+export class Failure extends Pring.Base {
+  @property ref: FirebaseFirestore.DocumentReference
+  @property refPath: string
+  @property neoTask: INeoTask
+
+  static querySnapshot(refPath: string) {
+    return firestore.collection('version/1/failure')
+      .where('refPath', '==', refPath)
+      .get()
   }
 
-  export class CompletedError extends Error {
-    step: string
+  static async setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask) {
+    const querySnapshot = await Failure.querySnapshot(documentSnapshot.ref.path)
 
-    constructor(step: string) {
-      super()
-      this.step = step
+    if (querySnapshot.docs.length === 0) {
+      const failure = new Failure()
+      // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
+      // failure.ref = documentSnapshot.ref
+      failure.refPath = documentSnapshot.ref.path
+      failure.neoTask = neoTask
+      return failure.save()
+    } else {
+      const failure = new Failure()
+      failure.init(querySnapshot.docs[0])
+      // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
+      // failure.ref = documentSnapshot.ref
+      failure.refPath = documentSnapshot.ref.path
+      failure.neoTask = neoTask
+      return failure.update()
     }
   }
 
-  export class ValidationError extends Error {
-    validationErrorType: string
-    reason: string
-    option?: any
+  static async deleteFailure(ref: FirebaseFirestore.DocumentReference) {
+    const querySnapshot = await Failure.querySnapshot(ref.path)
 
-    constructor(validationErrorType: string, reason: string) {
-      super()
-      this.validationErrorType = validationErrorType
-      this.reason = reason
+    for (const doc of querySnapshot.docs) {
+      const failure = new Failure()
+      failure.init(doc)
+      await failure.delete()
     }
   }
+}
 
-  export class Failure extends Pring.Base {
-    @property ref: FirebaseFirestore.DocumentReference
-    @property refPath: string
-    @property neoTask: INeoTask
+export enum NeoTaskStatus {
+  none = 0,
+  success = 1,
+  failure = 2
+}
 
-    static querySnapshot(refPath: string) {
-      return firestore.collection('version/1/failure')
-        .where('refPath', '==', refPath)
-        .get()
-    }
+export interface HasNeoTask extends Pring.Base {
+  neoTask: INeoTask
+}
 
-    static async setFailure(documentSnapshot: DeltaDocumentSnapshot, neoTask: INeoTask) {
-      const querySnapshot = await Failure.querySnapshot(documentSnapshot.ref.path)
+export interface INeoTask {
+  status: NeoTaskStatus
+  completed: { [id: string]: boolean }
+  invalid?: { validationError: string, reason: string }
+  retry?: { error: any[], count: number }
+  fatal?: { step: string, error: string }
+}
 
-      if (querySnapshot.docs.length === 0) {
-        const failure = new Failure()
-        // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
-        // failure.ref = documentSnapshot.ref
-        failure.refPath = documentSnapshot.ref.path
-        failure.neoTask = neoTask
-        return failure.save()
+// TODO: Task を2回上書き保存した時に古いのが消える
+export class NeoTask implements INeoTask {
+  status: NeoTaskStatus = NeoTaskStatus.none
+  completed: { [id: string]: boolean } = {}
+  invalid?: { validationError: string, reason: string }
+  retry?: { error: any[], count: number }
+  fatal?: { step: string, error: string }
+
+  static async markComplete(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string) {
+    const ref = firestore.doc(event.data.ref.path)
+    console.log('retrycf ref', ref)
+    return transaction.get(ref).then(tref => {
+      if (NeoTask.isCompleted(event, step)) {
+        throw new CompletedError(step)
       } else {
-        const failure = new Failure()
-        failure.init(querySnapshot.docs[0])
-        // FIXME: ref を保存しようとすると Error: Cannot encode type ([object Object]) のエラーが出る
-        // failure.ref = documentSnapshot.ref
-        failure.refPath = documentSnapshot.ref.path
-        failure.neoTask = neoTask
-        return failure.update()
+        const neoTask = new NeoTask(event.data)
+        neoTask.completed[step] = true
+        transaction.update(ref, { neoTask: neoTask.rawValue() })
       }
+    })
+  }
+
+  static async clearComplete(event: functions.Event<DeltaDocumentSnapshot>) {
+    const neoTask = new NeoTask(event.data)
+    neoTask.completed = {}
+    await event.data.ref.update({ neoTask: neoTask.rawValue() })
+    event.data.data().neoTask = neoTask.rawValue()
+  }
+
+  static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string) {
+    const neoTask = new NeoTask(event.data)
+    return !!neoTask.completed[step]
+  }
+
+  static async setRetry(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any) {
+    const neoTask = new NeoTask(event.data)
+
+    if (!neoTask.retry) {
+      neoTask.retry = { error: new Array(), count: 0 }
     }
 
-    static async deleteFailure(ref: FirebaseFirestore.DocumentReference) {
-      const querySnapshot = await Failure.querySnapshot(ref.path)
+    neoTask.status = NeoTaskStatus.failure
+    neoTask.retry.error.push(error.toString())
+    neoTask.retry.count += 1 // これをトリガーにして再実行する
 
-      for (const doc of querySnapshot.docs) {
-        const failure = new Failure()
-        failure.init(doc)
-        await failure.delete()
+    await event.data.ref.update({ neoTask: neoTask.rawValue() })
+    await Failure.setFailure(event.data, neoTask.rawValue())
+
+    return neoTask
+  }
+
+  static async setInvalid(event: functions.Event<DeltaDocumentSnapshot>, error: ValidationError) {
+    const neoTask = new NeoTask(event.data)
+
+    neoTask.invalid = {
+      validationError: error.validationErrorType,
+      reason: error.reason
+    }
+
+    await event.data.ref.update({ neoTask: neoTask.rawValue() })
+
+    return neoTask
+  }
+
+  static async setFatal(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any) {
+    const neoTask = new NeoTask(event.data)
+
+    neoTask.fatal = {
+      step: step,
+      error: error.toString()
+    }
+
+    console.log('fatal_error', event.data.ref.id)
+
+    await event.data.ref.update({ neoTask: neoTask.rawValue() })
+    await Failure.setFailure(event.data, neoTask.rawValue())
+
+    return neoTask
+  }
+
+  private static getRetryCount(data: DeltaDocumentSnapshot): number | undefined {
+    const snapshotData = data.data()
+    const currentNeoTask = snapshotData && <INeoTask>snapshotData.neoTask
+
+    if (!(currentNeoTask && currentNeoTask.retry && currentNeoTask.retry.count)) {
+      return undefined
+    }
+
+    return currentNeoTask.retry.count
+  }
+
+  private static MAX_RETRY_COUNT = 3
+  static shouldRetry(data: DeltaDocumentSnapshot): boolean {
+    const currentRetryCount = NeoTask.getRetryCount(data)
+    const previousRetryCount = data.previous && NeoTask.getRetryCount(data.previous)
+
+    if (!currentRetryCount) {
+      return false
+    }
+
+    // リトライカウントが3回以上だったら retry しない
+    if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT) {
+      return false
+    }
+
+    // リトライカウントがあるけど previous にはない
+    if (!previousRetryCount) {
+      return true // 新しく retry が生成されたということになるので true
+    }
+
+    // retry count が前回から変更されていたら retry する
+    return currentRetryCount > previousRetryCount
+  }
+
+  static async setFatalIfRetryCountIsMax(event: functions.Event<DeltaDocumentSnapshot>) {
+    const currentRetryCount = NeoTask.getRetryCount(event.data)
+    const previousRetryCount = event.data.previous && NeoTask.getRetryCount(event.data.previous)
+
+    if (currentRetryCount && previousRetryCount) {
+      if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
+        return NeoTask.setFatal(event, 'retry_failed', 'retry failed')
       }
     }
   }
 
-  export enum NeoTaskStatus {
-    none = 0,
-    success = 1,
-    failure = 2
+  static async success(event: functions.Event<DeltaDocumentSnapshot>) {
+    const neoTask: INeoTask = { status: NeoTaskStatus.success, completed: {} }
+    await event.data.ref.update({ neoTask: neoTask })
+    await Failure.deleteFailure(event.data.ref)
   }
 
-  export interface INeoTask {
-    status: NeoTaskStatus
-    completed: { [id: string]: boolean }
-    invalid?: { validationError: string, reason: string }
-    retry?: { error: any[], count: number }
-    fatal?: { step: string, error: string }
+  constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot) {
+    const neoTask = deltaDocumentSnapshot.data().neoTask
+    if (neoTask) {
+      if (neoTask.status) { this.status = neoTask.status }
+      if (neoTask.completed) { this.completed = neoTask.completed }
+      if (neoTask.invalid) { this.invalid = neoTask.invalid }
+      if (neoTask.retry) { this.retry = neoTask.retry }
+      if (neoTask.fatal) { this.fatal = neoTask.fatal }
+    }
   }
 
-  // TODO: Task を2回上書き保存した時に古いのが消える
-  export class NeoTask implements INeoTask {
-    status: NeoTaskStatus = NeoTaskStatus.none
-    completed: { [id: string]: boolean } = {}
-    invalid?: { validationError: string, reason: string }
-    retry?: { error: any[], count: number }
-    fatal?: { step: string, error: string }
-
-    static async markComplete(event: functions.Event<DeltaDocumentSnapshot>, transaction: FirebaseFirestore.Transaction, step: string) {
-      const ref = firestore.doc(event.data.ref.path)
-      console.log('retrycf ref', ref)
-      return transaction.get(ref).then(tref => {
-        if (NeoTask.isCompleted(event, step)) {
-          throw new CompletedError(step)
-        } else {
-          const neoTask = new NeoTask(event.data)
-          neoTask.completed[step] = true
-          transaction.update(ref, { neoTask: neoTask.rawValue() })
-        }
-      })
-    }
-
-    static async clearComplete(event: functions.Event<DeltaDocumentSnapshot>) {
-      const neoTask = new NeoTask(event.data)
-      neoTask.completed = {}
-      await event.data.ref.update({ neoTask: neoTask.rawValue() })
-      event.data.data().neoTask = neoTask.rawValue()
-    }
-
-    static isCompleted(event: functions.Event<DeltaDocumentSnapshot>, step: string) {
-      const neoTask = new NeoTask(event.data)
-      return !!neoTask.completed[step]
-    }
-
-    static async setRetry(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any) {
-      const neoTask = new NeoTask(event.data)
-
-      if (!neoTask.retry) {
-        neoTask.retry = { error: new Array(), count: 0 }
-      }
-
-      neoTask.status = NeoTaskStatus.failure
-      neoTask.retry.error.push(error.toString())
-      neoTask.retry.count += 1 // これをトリガーにして再実行する
-
-      await event.data.ref.update({ neoTask: neoTask.rawValue() })
-      await Failure.setFailure(event.data, neoTask.rawValue())
-
-      return neoTask
-    }
-
-    static async setInvalid(event: functions.Event<DeltaDocumentSnapshot>, error: ValidationError) {
-      const neoTask = new NeoTask(event.data)
-
-      neoTask.invalid = {
-        validationError: error.validationErrorType,
-        reason: error.reason
-      }
-
-      await event.data.ref.update({ neoTask: neoTask.rawValue() })
-
-      return neoTask
-    }
-
-    static async setFatal(event: functions.Event<DeltaDocumentSnapshot>, step: string, error: any) {
-      const neoTask = new NeoTask(event.data)
-
-      neoTask.fatal = {
-        step: step,
-        error: error.toString()
-      }
-
-      console.log('fatal_error', event.data.ref.id)
-
-      await event.data.ref.update({ neoTask: neoTask.rawValue() })
-      await Failure.setFailure(event.data, neoTask.rawValue())
-
-      return neoTask
-    }
-
-    private static getRetryCount(data: DeltaDocumentSnapshot): number | undefined {
-      const snapshotData = data.data()
-      const currentNeoTask = snapshotData && <INeoTask>snapshotData.neoTask
-
-      if (!(currentNeoTask && currentNeoTask.retry && currentNeoTask.retry.count)) {
-        return undefined
-      }
-
-      return currentNeoTask.retry.count
-    }
-
-    private static MAX_RETRY_COUNT = 3
-    static shouldRetry(data: DeltaDocumentSnapshot): boolean {
-      const currentRetryCount = NeoTask.getRetryCount(data)
-      const previousRetryCount = data.previous && NeoTask.getRetryCount(data.previous)
-
-      if (!currentRetryCount) {
-        return false
-      }
-
-      // リトライカウントが3回以上だったら retry しない
-      if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT) {
-        return false
-      }
-
-      // リトライカウントがあるけど previous にはない
-      if (!previousRetryCount) {
-        return true // 新しく retry が生成されたということになるので true
-      }
-
-      // retry count が前回から変更されていたら retry する
-      return currentRetryCount > previousRetryCount
-    }
-
-    static async setFatalIfRetryCountIsMax(event: functions.Event<DeltaDocumentSnapshot>) {
-      const currentRetryCount = NeoTask.getRetryCount(event.data)
-      const previousRetryCount = event.data.previous && NeoTask.getRetryCount(event.data.previous)
-
-      if (currentRetryCount && previousRetryCount) {
-        if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
-          return NeoTask.setFatal(event, 'retry_failed', 'retry failed')
-        }
-      }
-    }
-
-    static async success(event: functions.Event<DeltaDocumentSnapshot>) {
-      const neoTask: INeoTask = { status: NeoTaskStatus.success, completed: {} }
-      await event.data.ref.update({ neoTask: neoTask })
-      await Failure.deleteFailure(event.data.ref)
-    }
-
-    constructor(deltaDocumentSnapshot: DeltaDocumentSnapshot) {
-      const neoTask = deltaDocumentSnapshot.data().neoTask
-      if (neoTask) {
-        if (neoTask.status) { this.status = neoTask.status }
-        if (neoTask.completed) { this.completed = neoTask.completed }
-        if (neoTask.invalid) { this.invalid = neoTask.invalid }
-        if (neoTask.retry) { this.retry = neoTask.retry }
-        if (neoTask.fatal) { this.fatal = neoTask.fatal }
-      }
-    }
-
-    rawValue(): INeoTask {
-      const neoTask: INeoTask = { status: this.status, completed: {} }
-      if (this.invalid) { neoTask.invalid = this.invalid }
-      if (this.retry) { neoTask.retry = this.retry }
-      if (this.fatal) { neoTask.fatal = this.fatal }
-      return neoTask
-    }
+  rawValue(): INeoTask {
+    const neoTask: INeoTask = { status: this.status, completed: {} }
+    if (this.invalid) { neoTask.invalid = this.invalid }
+    if (this.retry) { neoTask.retry = this.retry }
+    if (this.fatal) { neoTask.fatal = this.fatal }
+    return neoTask
   }
 }
