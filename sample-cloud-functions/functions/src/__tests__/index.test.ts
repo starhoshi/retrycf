@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin'
-import * as Model from './sampleModel'
+import * as Model from '../sampleModel'
 import 'jest'
 import { Pring } from 'pring'
 
@@ -28,7 +28,7 @@ it('order create', async () => {
     return sku.save()
   }))
 
-  const testOrders = [...Array(5).keys()].map(a => {
+  const testOrders = [...Array(200).keys()].map(a => {
     const testOrder = new Model.RetryOrder()
     skus.forEach(sku => {
       testOrder.skus.insert(sku)

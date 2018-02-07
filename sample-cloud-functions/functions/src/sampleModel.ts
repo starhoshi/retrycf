@@ -11,3 +11,14 @@ export class RetrySKU extends Pring.Base {
   @property stock = 100
   @property index = 0
 }
+
+interface PaymentProtocol {}
+interface WehbookProtocol {
+  post(error: any): Promise<any>
+}
+
+class Slack implements WehbookProtocol {
+  async post(error: any) {
+    // post to slack
+  }
+}

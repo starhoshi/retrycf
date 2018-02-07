@@ -1,133 +1,121 @@
-// import * as functions from 'firebase-functions'
-// import * as admin from 'firebase-admin'
-// import * as Retrycf from 'retrycf'
-// // import { INeoTask, NeoTask } from '../../../retrycf/src/retrycf'
-// import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
-// import { Pring } from 'pring'
+import * as functions from 'firebase-functions'
+import * as admin from 'firebase-admin'
+import * as Retrycf from 'retrycf'
+import * as Model from './sampleModel'
+// import { INeoTask, NeoTask } from '../../../retrycf/src/retrycf'
+import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
+import { Pring } from 'pring'
 
-// admin.initializeApp(<admin.AppOptions>functions.config().firebase)
-// Pring.initialize(functions.config().firebase)
-// Retrycf.initialize(functions.config().firebase)
+admin.initializeApp(<admin.AppOptions>functions.config().firebase)
+Pring.initialize(functions.config().firebase)
+Retrycf.initialize(functions.config().firebase)
 
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//   // response.send("Hello from Firebase!\n\n")
-// })
+export const createTestOrder = functions.firestore.document(`${Model.RetryOrder.getPath()}/{testOrderID}`).onCreate(async event => {
+  const order = new Model.RetryOrder()
+  order.init(event.data)
 
-// export const createTestOrder = functions.firestore.document(`/version/1/testorder/{testOrderID}`).onCreate(async event => {
-//   try {
-//     await main(event)
-//     return undefined
-//   } catch (e) {
-//     console.log('createTestOrder error', e)
-//     const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder', e)
-//     throw e
-//   }
-// })
+  try {
+    await main(order)
+    return undefined
+  } catch (e) {
+    const neoTask = await Retrycf.NeoTask.setRetry(order, 'createTestOrder', e)
+    throw e
+  }
+})
 
-// export const createTestOrder2 = functions.firestore.document(`/version/1/testorder2/{testOrderID}`).onCreate(async event => {
-//   try {
-//     await main(event)
-//     return undefined
-//   } catch (e) {
-//     console.log('createTestOrder2 error', e)
-//     const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder2', e)
-//     throw e
-//   }
-// })
+export const updateTestOrder = functions.firestore.document(`${Model.RetryOrder.getPath()}/{testOrderID}`).onUpdate(async event => {
+  const order = new Model.RetryOrder()
+  order.init(event.data)
+  const preOrder = new Model.RetryOrder()
+  preOrder.init(event.data.previous)
 
-// export const updateTestOrder = functions.firestore.document(`/version/1/testorder/{testOrderID}`).onUpdate(async event => {
-//   try {
-//     const shouldRetry = Retrycf.NeoTask.shouldRetry(event.data)
-//     await Retrycf.NeoTask.setFatalIfRetryCountIsMax(event)
+  try {
+    const shouldRetry = Retrycf.NeoTask.shouldRetry(order, preOrder)
+    await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order)
 
-//     console.log('shouldretry', shouldRetry)
+    console.log('shouldretry', shouldRetry)
 
-//     if (!shouldRetry) {
-//       return undefined
-//     }
+    if (!shouldRetry) {
+      return undefined
+    }
 
-//     await main(event)
-//     return undefined
-//   } catch (e) {
-//     console.log('createTestOrder error', e)
-//     const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder', e)
-//     throw e
-//   }
-// })
+    await main(order)
+    return undefined
+  } catch (e) {
+    if (e.constructor === Retrycf.CompletedError) {
+      console.log('completed error')
+      return undefined
+    }
 
-// export const updateTestOrder2 = functions.firestore.document(`/version/1/testorder2/{testOrderID}`).onUpdate(async event => {
-//   try {
-//     const shouldRetry = Retrycf.NeoTask.shouldRetry(event.data)
-//     await Retrycf.NeoTask.setFatalIfRetryCountIsMax(event)
+    const neoTask = await Retrycf.NeoTask.setRetry(order, 'createTestOrder', e)
+    throw e
+  }
+})
 
-//     console.log('shouldretry', shouldRetry)
+const main = async (order: Model.RetryOrder) => {
+  const skus = await order.skus.get(Model.RetrySKU).then(ss => {
+    return ss.map(sku => {
+      return admin.firestore().collection(Model.RetrySKU.getPath()).doc(sku.id)
+    })
+  })
 
-//     if (!shouldRetry) {
-//       return undefined
-//     }
+  await decreaseStock(order, skus)
+  await Retrycf.NeoTask.setSuccess(order)
+}
 
-//     await main(event)
-//     return undefined
-//   } catch (e) {
-//     console.log('createTestOrder2 error', e)
-//     const neoTask = await Retrycf.NeoTask.setRetry(event, 'createTestOrder2', e)
-//     throw e
-//   }
-// })
+const decreaseStock = async (order: Model.RetryOrder, skuRefs: FirebaseFirestore.DocumentReference[]) => {
+  return admin.firestore().runTransaction(async (transaction) => {
+    const promises: Promise<any>[] = []
+    for (const sku of skuRefs) {
+      const t = transaction.get(sku).then(tsku => {
+        const newStock = tsku.data()!.stock - 1
+        console.log(order.id, sku.id, newStock)
+        transaction.update(sku, { stock: newStock })
+      })
+      promises.push(t)
+    }
 
-// const main = async (event: functions.Event<DeltaDocumentSnapshot>) => {
-//   console.log('eventID', event.eventId)
-//   console.log('event', event)
-//   const testOrderData = event.data.data()
-//   const testOrderID = event.params!.testOrderID
-//   console.log(testOrderID, event.eventType, 'start')
+    const step = 'stock'
+    let neoTask: Retrycf.NeoTask
 
-//   const skus = <FirebaseFirestore.DocumentReference[]>testOrderData.orderSKUs
-//   await decreaseStock(testOrderID, skus, event)
-//   // await throwErrorDecreaseStock(testOrderID, skus, event)
+    const orderRef = admin.firestore().doc(order.getPath())
+    const orderPromise = transaction.get(orderRef).then(tref => {
+      if (Retrycf.NeoTask.isCompleted(order, step)) {
+        throw new Retrycf.CompletedError(step)
+      } else {
+        neoTask = Retrycf.NeoTask.makeNeoTask(order)
+        const completed = { [step]: true }
+        neoTask.completed = completed
+        console.log('transaction order', order.rawValue())
+        transaction.update(orderRef, { neoTask: neoTask.rawValue() })
+      }
+    })
+    promises.push(orderPromise)
 
-//   console.log(testOrderID, 'finish')
+    return Promise.all(promises)
+  })
+}
 
-//   await Retrycf.NeoTask.success(event)
-// }
-
-// const decreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[], event: functions.Event<DeltaDocumentSnapshot>) => {
-//   return admin.firestore().runTransaction(async (transaction) => {
-//     const promises: Promise<any>[] = []
-//     for (const sku of skuRefs) {
-//       const t = transaction.get(sku).then(tsku => {
-//         const newStock = tsku.data()!.stock - 1
-//         console.log(testOrderID, sku.id, newStock)
-//         transaction.update(sku, { stock: newStock })
-//       })
-//       promises.push(t)
-//     }
-//     promises.push(Retrycf.NeoTask.markComplete(event, transaction, 'decreaseStock'))
-
-//     return Promise.all(promises)
-//   })
-// }
-
-// const throwErrorDecreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
-//   return admin.firestore().runTransaction(async (transaction) => {
-//     const promises: Promise<any>[] = []
-//     try {
-//       for (const sku of skuRefs) {
-//         const t = transaction.get(sku).then(tsku => {
-//           if (tsku.data()!.index === 2) {
-//             throw `${testOrderID}, index 3`
-//           } else {
-//             const newStock = tsku.data()!.stock - 1
-//             console.log(testOrderID, sku.id, newStock)
-//             transaction.update(sku, { stock: newStock })
-//           }
-//         })
-//         promises.push(t)
-//       }
-//     } catch (e) {
-//       console.error(testOrderID, e)
-//       throw e
-//     }
-//     return Promise.all(promises)
-//   })
-// }
+const throwErrorDecreaseStock = async (testOrderID: string, skuRefs: FirebaseFirestore.DocumentReference[]) => {
+  return admin.firestore().runTransaction(async (transaction) => {
+    const promises: Promise<any>[] = []
+    try {
+      for (const sku of skuRefs) {
+        const t = transaction.get(sku).then(tsku => {
+          if (tsku.data()!.index === 2) {
+            throw `${testOrderID}, index 3`
+          } else {
+            const newStock = tsku.data()!.stock - 1
+            console.log(testOrderID, sku.id, newStock)
+            transaction.update(sku, { stock: newStock })
+          }
+        })
+        promises.push(t)
+      }
+    } catch (e) {
+      console.error(testOrderID, e)
+      throw e
+    }
+    return Promise.all(promises)
+  })
+}
