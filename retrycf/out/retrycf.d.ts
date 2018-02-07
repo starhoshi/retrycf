@@ -53,6 +53,6 @@ export declare class NeoTask extends Pring.Base {
     static getRetryCount<T extends HasNeoTask>(model: T): number | undefined;
     private static MAX_RETRY_COUNT;
     static shouldRetry<T extends HasNeoTask>(model: T, previoudModel?: T): boolean;
-    static setFatalIfRetryCountIsMax<T extends HasNeoTask>(model: T, previoudModel?: T): Promise<void>;
+    static setFatalIfRetryCountIsMax<T extends HasNeoTask>(model: T, previoudModel?: T): Promise<T>;
     static setSuccess<T extends HasNeoTask>(model: T): Promise<T>;
 }

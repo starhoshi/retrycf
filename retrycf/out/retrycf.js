@@ -208,9 +208,10 @@ class NeoTask extends pring_1.Pring.Base {
             const previousRetryCount = previoudModel && NeoTask.getRetryCount(previoudModel);
             if (currentRetryCount && previousRetryCount) {
                 if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
-                    yield NeoTask.setFatal(model, 'retry_failed', 'retry failed');
+                    model = yield NeoTask.setFatal(model, 'retry_failed', 'retry failed');
                 }
             }
+            return model;
         });
     }
     static setSuccess(model) {
