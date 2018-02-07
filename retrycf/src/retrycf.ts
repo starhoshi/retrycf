@@ -211,9 +211,11 @@ export class NeoTask extends Pring.Base {
 
     if (currentRetryCount && previousRetryCount) {
       if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
-        await NeoTask.setFatal(model, 'retry_failed', 'retry failed')
+        model = await NeoTask.setFatal(model, 'retry_failed', 'retry failed')
       }
     }
+
+    return model
   }
 
   static async setSuccess<T extends HasNeoTask>(model: T) {

@@ -351,7 +351,9 @@ describe('setFatalIfRetryCountIsMax', async () => {
           preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
           preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
 
-          await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, preOrder)
+          order = await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, preOrder)
+          expect(order.neoTask!.fatal!.step).toEqual('retry_failed')
+          expect(order.neoTask!.fatal!.error).toEqual('retry failed')
 
           const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
           const failure = new Retrycf.Failure()
