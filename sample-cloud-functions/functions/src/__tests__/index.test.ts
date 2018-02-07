@@ -1,26 +1,38 @@
 import * as admin from 'firebase-admin'
+import * as Model from './sampleModel'
 import 'jest'
+import { Pring } from 'pring'
 
 beforeAll(() => {
-  const serviceAccount = require('../../sandbox-329fc-firebase-adminsdk.json')
+  const serviceAccount = require('../../../../sandbox-329fc-firebase-adminsdk.json')
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
+  })
+
+  Pring.initialize({
+    projectId: 'sandbox-329fc',
+    keyFilename: '../../sandbox-329fc-firebase-adminsdk.json'
   })
 })
 
 it('order create', async () => {
   jest.setTimeout(1000000)
 
-  const skuData = [...Array(3).keys()].map(index => {
-    return { price: 5000, stock: 1000, index: index }
+  const skus = [...Array(3).keys()].map(index => {
+    // return { price: 5000, stock: 1000, index: index }
+    const sku = new Model.RetrySKU()
+    sku.index = index
+    return sku
   })
-  const skus = await Promise.all(skuData.map(data => {
-    return admin.firestore().collection('version/1/testsku').add(data)
+  await Promise.all(skus.map(sku => {
+    return sku.save()
   }))
 
   const testOrders = [...Array(5).keys()].map(a => {
-    const testOrder: any = {}
-    testOrder.orderSKUs = skus
+    const testOrder = new Model.RetryOrder()
+    skus.forEach(sku => {
+      testOrder.skus.insert(sku)
+    })
     return testOrder
   })
 
@@ -30,29 +42,16 @@ it('order create', async () => {
   expect(true)
 })
 
-const addOrdersAtOnce = async (testOrders: any[]) => {
-  const testOrderColRef = admin.firestore().collection('version/1/testorder')
-  const testOrderColRef2 = admin.firestore().collection('version/1/testorder2')
-
-  await Promise.all(testOrders.map(async testOrder => {
-    return testOrderColRef.add(testOrder)
-  }))
-  await Promise.all(testOrders.map(async testOrder => {
-    return testOrderColRef2.add(testOrder)
+const addOrdersAtOnce = async (testOrders: Model.RetryOrder[]) => {
+  await Promise.all(testOrders.map(testOrder => {
+    return testOrder.save()
   }))
 }
 
-const addOrdersPer02 = async (testOrders: any[]) => {
-  const testOrderColRef = admin.firestore().collection('version/1/testorder')
-  const testOrderColRef2 = admin.firestore().collection('version/1/testorder2')
-
+const addOrdersPer02 = async (testOrders: Model.RetryOrder[]) => {
   for (const testOrder of testOrders) {
     await sleep(0.2)
-    await testOrderColRef.add(testOrder)
-  }
-  for (const testOrder of testOrders) {
-    await sleep(0.2)
-    await testOrderColRef2.add(testOrder)
+    await testOrder.save()
   }
 }
 
