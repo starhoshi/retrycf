@@ -28,7 +28,7 @@ it('order create', async () => {
     return sku.save()
   }))
 
-  const testOrders = [...Array(200).keys()].map(a => {
+  const testOrders = [...Array(100).keys()].map(a => {
     const testOrder = new Model.RetryOrder()
     skus.forEach(sku => {
       testOrder.skus.insert(sku)
@@ -50,8 +50,8 @@ const addOrdersAtOnce = async (testOrders: Model.RetryOrder[]) => {
 
 const addOrdersPer02 = async (testOrders: Model.RetryOrder[]) => {
   for (const testOrder of testOrders) {
-    await sleep(0.2)
-    await testOrder.save()
+    await sleep(200)
+    testOrder.save()
   }
 }
 
