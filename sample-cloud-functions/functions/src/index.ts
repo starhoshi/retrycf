@@ -80,12 +80,16 @@ const decreaseStock = async (order: Model.RetryOrder, skuRefs: FirebaseFirestore
 
     const orderRef = admin.firestore().doc(order.getPath())
     const orderPromise = transaction.get(orderRef).then(tref => {
-      if (Retrycf.NeoTask.isCompleted(order, step)) {
+      const transactionOrder = new Model.RetryOrder()
+      transactionOrder.init(tref)
+      if (Retrycf.NeoTask.isCompleted(transactionOrder, step)) {
         throw new Retrycf.CompletedError(step)
       } else {
-        neoTask = Retrycf.NeoTask.makeNeoTask(order)
+        neoTask = Retrycf.NeoTask.makeNeoTask(transactionOrder)
+        order.neoTask = neoTask
         const completed = { [step]: true }
         neoTask.completed = completed
+        order.neoTask.completed = completed
         console.log('transaction order', order.rawValue())
         transaction.update(orderRef, { neoTask: neoTask.rawValue() })
       }
