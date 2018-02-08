@@ -24,10 +24,10 @@ describe('clearCompleted', () => {
 
     // chack callback order
     order = await Retrycf.NeoTask.clearCompleted(order)
-    expect(order.neoTask!.completed).toEqual({})
+    expect(order.neoTask!.completed).toBeUndefined()
 
     const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-    expect(fetchedOrder.neoTask!.completed).toEqual({})
+    expect(fetchedOrder.neoTask!.completed).toBeUndefined()
   })
 })
 

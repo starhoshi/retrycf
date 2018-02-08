@@ -3,6 +3,7 @@ import * as FirebaseFirestore from '@google-cloud/firestore'
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
 import * as admin from 'firebase-admin'
 import { Pring, property } from 'pring'
+import { FieldValue } from '@google-cloud/firestore'
 
 var firestore: FirebaseFirestore.Firestore
 
@@ -93,11 +94,10 @@ export class NeoTask extends Pring.Base {
   @property fatal?: { step: string, error: string }
 
   static async clearCompleted<T extends HasNeoTask>(model: T) {
-    if (!model.neoTask) { return model }
-    if (!model.neoTask.completed) { return model }
-
-    model.neoTask.completed = {}
-    await model.reference.update({ neoTask: { completed: {} } })
+    let neoTask = NeoTask.makeNeoTask(model)
+    delete neoTask.completed
+    model.neoTask = neoTask.rawValue()
+    await model.reference.update({ neoTask: neoTask.rawValue() })
     return model
   }
 

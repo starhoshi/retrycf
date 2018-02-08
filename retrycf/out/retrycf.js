@@ -95,14 +95,10 @@ var NeoTaskStatus;
 class NeoTask extends pring_1.Pring.Base {
     static clearCompleted(model) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!model.neoTask) {
-                return model;
-            }
-            if (!model.neoTask.completed) {
-                return model;
-            }
-            model.neoTask.completed = {};
-            yield model.reference.update({ neoTask: { completed: {} } });
+            let neoTask = NeoTask.makeNeoTask(model);
+            delete neoTask.completed;
+            model.neoTask = neoTask.rawValue();
+            yield model.reference.update({ neoTask: neoTask.rawValue() });
             return model;
         });
     }
