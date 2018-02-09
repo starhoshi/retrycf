@@ -1,6 +1,6 @@
 # retrycf
 
-retrycf is an npm library that executes Cloud Functions again when it fails.
+retrycf is an npm library that fire Cloud Functions again when it fails.
 
 ## Install
 
