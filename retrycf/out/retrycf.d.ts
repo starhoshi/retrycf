@@ -1,5 +1,9 @@
 import * as FirebaseFirestore from '@google-cloud/firestore';
 import { Pring } from 'pring';
+/**
+ * Initialize Retrycf
+ * @param options functions.config().firebase
+ */
 export declare function initialize(options?: any): void;
 export declare class CompletedError extends Error {
     step: string;

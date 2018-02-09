@@ -7,6 +7,10 @@ import { FieldValue } from '@google-cloud/firestore'
 
 var firestore: FirebaseFirestore.Firestore
 
+/**
+ * Initialize Retrycf
+ * @param options functions.config().firebase
+ */
 export function initialize(options?: any) {
   firestore = new FirebaseFirestore.Firestore(options)
   Pring.initialize(options)
