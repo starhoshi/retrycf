@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="https://raw.githubusercontent.com/starhoshi/retrycf/master/docs/logo.png" width='250px' />
+</p>
+
 # retrycf
 
 retrycf is an npm library that fire Cloud Functions again when it fails.
