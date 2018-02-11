@@ -1,8 +1,10 @@
 import * as Retrycf from 'retrycf'
 import { Pring, property } from 'pring'
+import * as EventResponse from 'event-response'
 
 export class RetryOrder extends Pring.Base implements Retrycf.HasNeoTask {
   @property neoTask?: Retrycf.NeoTask | undefined
+  @property response: EventResponse.IResponse
   @property skus: Pring.ReferenceCollection<RetrySKU> = new Pring.ReferenceCollection(this)
 }
 

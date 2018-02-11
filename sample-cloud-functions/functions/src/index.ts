@@ -5,10 +5,12 @@ import * as Model from './sampleModel'
 // import { INeoTask, NeoTask } from '../../../retrycf/src/retrycf'
 import { DeltaDocumentSnapshot } from 'firebase-functions/lib/providers/firestore'
 import { Pring } from 'pring'
+import * as EventResponse from 'event-response'
 
 admin.initializeApp(<admin.AppOptions>functions.config().firebase)
 Pring.initialize(functions.config().firebase)
 Retrycf.initialize(functions.config().firebase)
+EventResponse.initialize(functions.config().firebase, {collectionPath: 'version/1/failure'})
 
 export const createTestOrder = functions.firestore.document(`${Model.RetryOrder.getPath()}/{testOrderID}`).onCreate(async event => {
   const order = new Model.RetryOrder()
@@ -61,6 +63,10 @@ const main = async (order: Model.RetryOrder) => {
 
   await decreaseStock(order, skus)
   await Retrycf.NeoTask.setSuccess(order)
+  await new EventResponse.Response(order.reference).setOK()
+
+  const updatedOrder = await Model.RetryOrder.get(order.id) as Model.RetryOrder
+  console.log(updatedOrder.rawValue())
 }
 
 const decreaseStock = async (order: Model.RetryOrder, skuRefs: FirebaseFirestore.DocumentReference[]) => {

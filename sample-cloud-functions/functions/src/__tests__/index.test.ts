@@ -28,7 +28,7 @@ it('order create', async () => {
     return sku.save()
   }))
 
-  const testOrders = [...Array(100).keys()].map(a => {
+  const testOrders = [...Array(1).keys()].map(a => {
     const testOrder = new Model.RetryOrder()
     skus.forEach(sku => {
       testOrder.skus.insert(sku)
