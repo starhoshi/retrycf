@@ -22,10 +22,16 @@ exports.initialize = (adminOptions, options) => {
         _maxRetryCount = options.maxRetryCount;
     }
 };
+/**
+ * Retrycf.Status
+ */
 var Status;
 (function (Status) {
+    /** should not retry */
     Status["ShouldNotRetry"] = "ShouldRetry";
+    /** should retry */
     Status["ShouldRetry"] = "ShouldRetry";
+    /** retry failed */
     Status["RetryFailed"] = "RetryFailed";
 })(Status = exports.Status || (exports.Status = {}));
 const makeRetry = (data, error) => {
@@ -38,11 +44,21 @@ const makeRetry = (data, error) => {
     retry.errors.push(currentError);
     return retry;
 };
+/**
+ * save retry parameters.
+ * @param ref event.data.ref
+ * @param data event.data.data()
+ * @param error Error
+ */
 exports.setRetry = (ref, data, error) => __awaiter(this, void 0, void 0, function* () {
     const retry = makeRetry(data, error);
     yield ref.update({ retry: retry });
     return retry;
 });
+/**
+ * Get retry count from data
+ * @param data event.data.data()
+ */
 const getRetryCount = (data) => {
     if (!data) {
         return undefined;
@@ -55,6 +71,13 @@ const getRetryCount = (data) => {
     }
     return data.retry.count;
 };
+/**
+ * If retry.count is increasing from previousData, it returns ShouldRetry.
+ * If retry.count is increased from previousData and it exceeds max retry count, RetryFailed is returned.
+ * @param data event.data.data()
+ * @param previousData event.data.previous.data()
+ * @param maxRetryCount optional. If you change maxRetryCount, set number.
+ */
 exports.retryStatus = (data, previousData, maxRetryCount = _maxRetryCount) => {
     const currentCount = getRetryCount(data);
     const previousCount = getRetryCount(previousData);
@@ -74,6 +97,10 @@ exports.retryStatus = (data, previousData, maxRetryCount = _maxRetryCount) => {
     }
     return Status.ShouldNotRetry;
 };
+/**
+ * update retry to {}.
+ * @param ref event.data.ref
+ */
 exports.clear = (ref) => __awaiter(this, void 0, void 0, function* () {
     yield ref.update({ retry: {} });
     return {};

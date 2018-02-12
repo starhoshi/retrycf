@@ -16,14 +16,25 @@ export const initialize = (adminOptions: any, options?: { maxRetryCount: number 
   }
 }
 
+/**
+ * Retrycf.Status
+ */
 export enum Status {
+  /** should not retry */
   ShouldNotRetry = 'ShouldRetry',
+  /** should retry */
   ShouldRetry = 'ShouldRetry',
+  /** retry failed */
   RetryFailed = 'RetryFailed'
 }
 
+/**
+ * Parameters to be saved by setRetry()
+ */
 export interface IRetry {
+  /** retry count */
   count: number
+  /** Record retry reason */
   errors: { createdAt: Date, error: any }[]
 }
 
@@ -39,12 +50,22 @@ const makeRetry = (data: any, error: any): IRetry => {
   return retry
 }
 
+/**
+ * save retry parameters.
+ * @param ref event.data.ref
+ * @param data event.data.data()
+ * @param error Error
+ */
 export const setRetry = async (ref: FirebaseFirestore.DocumentReference, data: any, error: any): Promise<IRetry> => {
   const retry = makeRetry(data, error)
   await ref.update({ retry: retry })
   return retry
 }
 
+/**
+ * Get retry count from data
+ * @param data event.data.data()
+ */
 const getRetryCount = (data?: any) => {
   if (!data) {
     return undefined
@@ -58,6 +79,13 @@ const getRetryCount = (data?: any) => {
   return data.retry.count
 }
 
+/**
+ * If retry.count is increasing from previousData, it returns ShouldRetry.
+ * If retry.count is increased from previousData and it exceeds max retry count, RetryFailed is returned.
+ * @param data event.data.data()
+ * @param previousData event.data.previous.data()
+ * @param maxRetryCount optional. If you change maxRetryCount, set number.
+ */
 export const retryStatus = (data: any, previousData: any, maxRetryCount: number = _maxRetryCount): Status => {
   const currentCount: number | undefined = getRetryCount(data)
   const previousCount: number | undefined = getRetryCount(previousData)
@@ -81,6 +109,10 @@ export const retryStatus = (data: any, previousData: any, maxRetryCount: number 
   return Status.ShouldNotRetry
 }
 
+/**
+ * update retry to {}.
+ * @param ref event.data.ref
+ */
 export const clear = async (ref: FirebaseFirestore.DocumentReference) => {
   await ref.update({ retry: {} })
   return {}
