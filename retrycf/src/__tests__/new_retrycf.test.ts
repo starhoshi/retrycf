@@ -35,8 +35,15 @@ describe('setRetry', () => {
       expect(retry.errors.length).toBe(1)
       expect(retry.errors[0].createdAt).toBeDefined()
       expect(retry.errors[0].error).toBe(error)
+
+      const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+      expect(updatedUser.retry.count).toBe(1)
+      expect(updatedUser.retry.errors.length).toBe(1)
+      expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[0].error).toBe(error)
     })
   })
+
   describe('data already exist retry', async () => {
     test('exist multiple error', async () => {
       await user.update({ retry: defaultRetry })
@@ -45,10 +52,37 @@ describe('setRetry', () => {
 
       expect(retry.count).toBe(2)
       expect(retry.errors.length).toBe(2)
-      expect(retry.errors[0].createdAt).toBe(defaultRetry.errors[0].createdAt)
+      expect(retry.errors[0].createdAt).toBeDefined()
       expect(retry.errors[0].error).toBe(defaultRetry.errors[0].error)
       expect(retry.errors[1].createdAt).toBeDefined()
       expect(retry.errors[1].error).toBe(error)
+
+      const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+      expect(updatedUser.retry.count).toBe(2)
+      expect(updatedUser.retry.errors.length).toBe(2)
+      expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[0].error).toBe(defaultRetry.errors[0].error)
+      expect(updatedUser.retry.errors[1].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[1].error).toBe(error)
+    })
+  })
+
+  describe('data.retry exist, but not exist count', async () => {
+    test('only 1 error', async () => {
+      await user.update({ retry: {} })
+      const event = Rescue.event(user, { name: 'test', retry: {} })
+      const retry = await Retrycf.setRetry(event.data.ref, event.data.data(), error)
+
+      expect(retry.count).toBe(1)
+      expect(retry.errors.length).toBe(1)
+      expect(retry.errors[0].createdAt).toBeDefined()
+      expect(retry.errors[0].error).toBe(error)
+
+      const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+      expect(updatedUser.retry.count).toBe(1)
+      expect(updatedUser.retry.errors.length).toBe(1)
+      expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[0].error).toBe(error)
     })
   })
 })
