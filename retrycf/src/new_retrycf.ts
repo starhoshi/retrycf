@@ -62,33 +62,26 @@ export const retryStatus = (data: any, previousData: any, maxRetryCount: number 
   const currentCount: number | undefined = getRetryCount(data)
   const previousCount: number | undefined = getRetryCount(previousData)
 
-  if (!currentCount) {
+  if (currentCount === undefined) {
     return Status.ShouldNotRetry
   }
 
-  // Not retry more than max times
-  // For example: currentCount(3) > maxRetryCount(2)
-  if (currentCount > maxRetryCount) {
-    return Status.RetryFailed
-  }
-
-  // Current neoTask.retry exists, but previous neoTask.retry does not exist
-  // For example: currentCount(1), previousCount(undfined)
-  if (!previousCount) {
+  if (previousCount === undefined && currentCount === 1) {
     return Status.ShouldRetry
   }
 
-  // Returns true if the current retry count has increased from the previous retry count.
-  // For example:
-  //      true: currentCount(2), previousCount(1)
-  //      false: currentCount(2), previousCount(2)
-  if (currentCount > previousCount) {
-    return Status.ShouldRetry
+  if (previousCount !== undefined && currentCount === previousCount + 1) {
+    if (currentCount > maxRetryCount) {
+      return Status.RetryFailed
+    } else {
+      return Status.ShouldRetry
+    }
   }
 
   return Status.ShouldNotRetry
 }
 
-export const clear = (ref: FirebaseFirestore.DocumentReference) => {
-  return ref.update({ retry: {} })
+export const clear = async (ref: FirebaseFirestore.DocumentReference) => {
+  await ref.update({ retry: {} })
+  return {}
 }

@@ -21,4 +21,4 @@ export interface IRetry {
 }
 export declare const setRetry: (ref: FirebaseFirestore.DocumentReference, data: any, error: any) => Promise<IRetry>;
 export declare const retryStatus: (data: any, previousData: any, maxRetryCount?: number) => Status;
-export declare const clear: (ref: FirebaseFirestore.DocumentReference) => Promise<FirebaseFirestore.WriteResult>;
+export declare const clear: (ref: FirebaseFirestore.DocumentReference) => Promise<{}>;

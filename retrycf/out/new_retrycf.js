@@ -58,28 +58,23 @@ const getRetryCount = (data) => {
 exports.retryStatus = (data, previousData, maxRetryCount = _maxRetryCount) => {
     const currentCount = getRetryCount(data);
     const previousCount = getRetryCount(previousData);
-    if (!currentCount) {
+    if (currentCount === undefined) {
         return Status.ShouldNotRetry;
     }
-    // Not retry more than max times
-    // For example: currentCount(3) > maxRetryCount(2)
-    if (currentCount > maxRetryCount) {
-        return Status.RetryFailed;
-    }
-    // Current neoTask.retry exists, but previous neoTask.retry does not exist
-    // For example: currentCount(1), previousCount(undfined)
-    if (!previousCount) {
+    if (previousCount === undefined && currentCount === 1) {
         return Status.ShouldRetry;
     }
-    // Returns true if the current retry count has increased from the previous retry count.
-    // For example:
-    //      true: currentCount(2), previousCount(1)
-    //      false: currentCount(2), previousCount(2)
-    if (currentCount > previousCount) {
-        return Status.ShouldRetry;
+    if (previousCount !== undefined && currentCount === previousCount + 1) {
+        if (currentCount > maxRetryCount) {
+            return Status.RetryFailed;
+        }
+        else {
+            return Status.ShouldRetry;
+        }
     }
     return Status.ShouldNotRetry;
 };
-exports.clear = (ref) => {
-    return ref.update({ retry: {} });
-};
+exports.clear = (ref) => __awaiter(this, void 0, void 0, function* () {
+    yield ref.update({ retry: {} });
+    return {};
+});
