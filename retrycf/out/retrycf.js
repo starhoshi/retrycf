@@ -1,10 +1,4 @@
 "use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -15,233 +9,72 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const FirebaseFirestore = require("@google-cloud/firestore");
-const pring_1 = require("pring");
-var firestore;
+let _firestore;
+let _maxRetryCount = 2;
 /**
- * Initialize Retrycf
- * @param options functions.config().firebase
+ * Initialize in your index.ts.
+ * @param adminOptions functions.config().firebase
+ * @param options maxRetryCount
  */
-function initialize(options) {
-    firestore = new FirebaseFirestore.Firestore(options);
-    pring_1.Pring.initialize(options);
-}
-exports.initialize = initialize;
-class CompletedError extends Error {
-    constructor(step) {
-        super();
-        this.step = step;
+exports.initialize = (adminOptions, options) => {
+    _firestore = new FirebaseFirestore.Firestore(adminOptions);
+    if (options) {
+        _maxRetryCount = options.maxRetryCount;
     }
-}
-exports.CompletedError = CompletedError;
-class ValidationError extends Error {
-    constructor(validationErrorType, reason) {
-        super();
-        this.validationErrorType = validationErrorType;
-        this.reason = reason;
+};
+var Status;
+(function (Status) {
+    Status["ShouldNotRetry"] = "ShouldRetry";
+    Status["ShouldRetry"] = "ShouldRetry";
+    Status["RetryFailed"] = "RetryFailed";
+})(Status = exports.Status || (exports.Status = {}));
+const makeRetry = (data, error) => {
+    const currentError = { createdAt: new Date(), error: error };
+    let retry = { count: 0, errors: new Array() };
+    if (data.retry && data.retry.count) {
+        retry = data.retry;
     }
-}
-exports.ValidationError = ValidationError;
-class Failure extends pring_1.Pring.Base {
-    static querySnapshot(refPath) {
-        return firestore.collection('version/1/failure')
-            .where('refPath', '==', refPath)
-            .get();
+    retry.count += 1;
+    retry.errors.push(currentError);
+    return retry;
+};
+exports.setRetry = (ref, data, error) => __awaiter(this, void 0, void 0, function* () {
+    const retry = makeRetry(data, error);
+    yield ref.update({ retry: retry });
+    return retry;
+});
+const getRetryCount = (data) => {
+    if (!data) {
+        return undefined;
     }
-    static setFailure(model, neoTask) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const querySnapshot = yield Failure.querySnapshot(model.reference.path);
-            if (querySnapshot.docs.length === 0) {
-                const failure = new Failure();
-                // FIXME: Error: Cannot encode type ([object Object])
-                // failure.ref = documentSnapshot.ref
-                failure.refPath = model.reference.path;
-                failure.neoTask = neoTask.rawValue();
-                return failure.save();
-            }
-            else {
-                const failure = new Failure();
-                failure.init(querySnapshot.docs[0]);
-                // FIXME: Error: Cannot encode type ([object Object])
-                // failure.ref = documentSnapshot.ref
-                failure.refPath = model.reference.path;
-                failure.neoTask = neoTask.rawValue();
-                return failure.update();
-            }
-        });
+    if (!data.retry) {
+        return undefined;
     }
-    static deleteFailure(model) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const querySnapshot = yield Failure.querySnapshot(model.reference.path);
-            for (const doc of querySnapshot.docs) {
-                const failure = new Failure();
-                failure.init(doc);
-                yield failure.delete();
-            }
-        });
+    if (!data.retry.count) {
+        return undefined;
     }
-}
-__decorate([
-    pring_1.property
-], Failure.prototype, "ref", void 0);
-__decorate([
-    pring_1.property
-], Failure.prototype, "refPath", void 0);
-__decorate([
-    pring_1.property
-], Failure.prototype, "neoTask", void 0);
-exports.Failure = Failure;
-var NeoTaskStatus;
-(function (NeoTaskStatus) {
-    NeoTaskStatus[NeoTaskStatus["none"] = 0] = "none";
-    NeoTaskStatus[NeoTaskStatus["success"] = 1] = "success";
-    NeoTaskStatus[NeoTaskStatus["failure"] = 2] = "failure";
-})(NeoTaskStatus = exports.NeoTaskStatus || (exports.NeoTaskStatus = {}));
-class NeoTask extends pring_1.Pring.Base {
-    static clearCompleted(model) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let neoTask = NeoTask.makeNeoTask(model);
-            delete neoTask.completed;
-            model.neoTask = neoTask.rawValue();
-            yield model.reference.update({ neoTask: neoTask.rawValue() });
-            return model;
-        });
+    return data.retry.count;
+};
+exports.retryStatus = (data, previousData, maxRetryCount = _maxRetryCount) => {
+    const currentCount = getRetryCount(data);
+    const previousCount = getRetryCount(previousData);
+    if (currentCount === undefined) {
+        return Status.ShouldNotRetry;
     }
-    static isCompleted(model, step) {
-        if (!model.neoTask) {
-            return false;
+    if (previousCount === undefined && currentCount === 1) {
+        return Status.ShouldRetry;
+    }
+    if (previousCount !== undefined && currentCount === previousCount + 1) {
+        if (currentCount > maxRetryCount) {
+            return Status.RetryFailed;
         }
-        if (!model.neoTask.completed) {
-            return false;
+        else {
+            return Status.ShouldRetry;
         }
-        return !!model.neoTask.completed[step];
     }
-    static makeNeoTask(model) {
-        let neoTask = new NeoTask();
-        if (model.neoTask) {
-            if (model.neoTask.status) {
-                neoTask.status = model.neoTask.status;
-            }
-            if (model.neoTask.completed) {
-                neoTask.completed = model.neoTask.completed;
-            }
-            if (model.neoTask.invalid) {
-                neoTask.invalid = model.neoTask.invalid;
-            }
-            if (model.neoTask.retry) {
-                neoTask.retry = model.neoTask.retry;
-            }
-            if (model.neoTask.fatal) {
-                neoTask.fatal = model.neoTask.fatal;
-            }
-        }
-        return neoTask;
-    }
-    static setRetry(model, step, error) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let neoTask = NeoTask.makeNeoTask(model);
-            if (!neoTask.retry) {
-                neoTask.retry = { error: new Array(), count: 0 };
-            }
-            neoTask.status = NeoTaskStatus.failure;
-            neoTask.retry.error.push(error.toString());
-            neoTask.retry.count += 1; // retry trigger
-            yield model.reference.update({ neoTask: neoTask.rawValue() });
-            yield Failure.setFailure(model, neoTask);
-            model.neoTask = neoTask.rawValue();
-            return model;
-        });
-    }
-    static setInvalid(model, error) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let neoTask = NeoTask.makeNeoTask(model);
-            neoTask.status = NeoTaskStatus.failure;
-            neoTask.invalid = {
-                validationError: error.validationErrorType,
-                reason: error.reason
-            };
-            yield model.reference.update({ neoTask: neoTask.rawValue() });
-            model.neoTask = neoTask.rawValue();
-            return model;
-        });
-    }
-    static setFatal(model, step, error) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let neoTask = NeoTask.makeNeoTask(model);
-            neoTask.status = NeoTaskStatus.failure;
-            neoTask.fatal = {
-                step: step,
-                error: error.toString()
-            };
-            yield model.reference.update({ neoTask: neoTask.rawValue() });
-            yield Failure.setFailure(model, neoTask);
-            model.neoTask = neoTask.rawValue();
-            return model;
-        });
-    }
-    static getRetryCount(model) {
-        let neoTask = NeoTask.makeNeoTask(model);
-        if (!neoTask.retry) {
-            return undefined;
-        }
-        return neoTask.retry.count;
-    }
-    static shouldRetry(model, previoudModel) {
-        const currentRetryCount = NeoTask.getRetryCount(model);
-        const previousRetryCount = previoudModel && NeoTask.getRetryCount(previoudModel);
-        if (!currentRetryCount) {
-            return false;
-        }
-        // Not retry more than three times
-        if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT) {
-            return false;
-        }
-        // Current neoTask.retry exists, but previous neoTask.retry does not exist
-        if (!previousRetryCount) {
-            return true; // true because a new retry has been generated
-        }
-        // Returns true if the current retry count has increased from the previous retry count.
-        return currentRetryCount > previousRetryCount;
-    }
-    static setFatalIfRetryCountIsMax(model, previoudModel) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const currentRetryCount = NeoTask.getRetryCount(model);
-            const previousRetryCount = previoudModel && NeoTask.getRetryCount(previoudModel);
-            if (currentRetryCount && previousRetryCount) {
-                if (currentRetryCount >= NeoTask.MAX_RETRY_COUNT && currentRetryCount > previousRetryCount) {
-                    model = yield NeoTask.setFatal(model, 'retry_failed', 'retry failed');
-                }
-            }
-            return model;
-        });
-    }
-    static setSuccess(model) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let neoTask = new NeoTask();
-            neoTask.status = NeoTaskStatus.success;
-            if (model.neoTask && model.neoTask.completed) {
-                neoTask.completed = model.neoTask.completed;
-            }
-            yield model.reference.update({ neoTask: neoTask.rawValue() });
-            yield Failure.deleteFailure(model);
-            model.neoTask = neoTask.rawValue();
-            return model;
-        });
-    }
-}
-NeoTask.MAX_RETRY_COUNT = 3;
-__decorate([
-    pring_1.property
-], NeoTask.prototype, "status", void 0);
-__decorate([
-    pring_1.property
-], NeoTask.prototype, "completed", void 0);
-__decorate([
-    pring_1.property
-], NeoTask.prototype, "invalid", void 0);
-__decorate([
-    pring_1.property
-], NeoTask.prototype, "retry", void 0);
-__decorate([
-    pring_1.property
-], NeoTask.prototype, "fatal", void 0);
-exports.NeoTask = NeoTask;
+    return Status.ShouldNotRetry;
+};
+exports.clear = (ref) => __awaiter(this, void 0, void 0, function* () {
+    yield ref.update({ retry: {} });
+    return {};
+});

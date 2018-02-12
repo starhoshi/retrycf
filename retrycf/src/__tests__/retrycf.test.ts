@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin'
-import * as Retrycf from '../new_retrycf'
+import * as Retrycf from '../retrycf'
 import * as Rescue from 'rescue-fire'
 import 'jest'
 
