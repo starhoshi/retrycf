@@ -3302,6 +3302,13 @@ require-main-filename@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/require-main-filename/-/require-main-filename-1.0.1.tgz#97f717b69d48784f5f526a6c5aa8ffdda055a4d1"
 
+rescue-fire@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/rescue-fire/-/rescue-fire-0.2.0.tgz#243707e896449c7aef5102ecef2b02845322e57d"
+  dependencies:
+    firebase-admin "^5.8.2"
+    firebase-functions "^0.8.1"
+
 resolve-cwd@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/resolve-cwd/-/resolve-cwd-2.0.0.tgz#00a9f7387556e27038eae232caa372a6a59b665a"
