@@ -1,441 +1,208 @@
-import { Pring, property } from 'pring'
+import * as admin from 'firebase-admin'
 import * as Retrycf from '../retrycf'
-import * as Helper from './firebaseHelper'
-import * as Model from './sampleModel'
+import * as Rescue from 'rescue-fire'
 import 'jest'
 
 jest.setTimeout(20000)
 beforeAll(() => {
-  const _ = Helper.Firebase.shared
+  const serviceAccount = require('../../../sandbox-329fc-firebase-adminsdk.json')
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  })
+
+  Retrycf.initialize({
+    projectId: 'sandbox-329fc',
+    keyFilename: '../sandbox-329fc-firebase-adminsdk.json'
+  }, { maxRetryCount: 2 })
 })
 
-const step = 'step'
+let user: FirebaseFirestore.DocumentReference
+const data = { name: 'test' }
+const error = Error('An error occured')
+const defaultRetry = { count: 1, errors: [{ createdAt: new Date(), error: error.toString(), stack: 'line:1' }] }
 
-describe('clearCompleted', () => {
-  test('clear', async () => {
-    let order = new Model.SampleOrder()
-    const neoTask = new Retrycf.NeoTask()
-    const completed = { [step]: true }
-    neoTask.completed = completed
-    order.neoTask = neoTask.rawValue()
-    await order.save()
-
-    expect(order.neoTask!.completed![step]).toEqual(true)
-
-    // chack callback order
-    order = await Retrycf.NeoTask.clearCompleted(order)
-    expect(order.neoTask!.completed).toBeUndefined()
-
-    const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-    expect(fetchedOrder.neoTask!.completed).toBeUndefined()
-  })
+beforeEach(async () => {
+  user = await admin.firestore().collection('retrycf-user').add(data)
 })
 
-describe('isCompleted', async () => {
-  let order: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-  })
-  describe('when neoTask is undefined', () => {
-    test('false', async () => {
-      order.neoTask = undefined
-      expect(Retrycf.NeoTask.isCompleted(order, 'step')).toEqual(false)
+describe('setRetry', () => {
+  describe('data not exist retry', () => {
+    test('only 1 error', async () => {
+      const event = Rescue.event(user, data)
+      const retry = await Retrycf.setRetry(event.data.ref, event.data.data(), error)
+
+      expect(retry.count).toBe(1)
+      expect(retry.errors.length).toBe(1)
+      expect(retry.errors[0].createdAt).toBeDefined()
+      expect(retry.errors[0].error).toBeDefined()
+      expect(retry.errors[0].stack).toBeDefined()
+
+      const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+      expect(updatedUser.retry.count).toBe(1)
+      expect(updatedUser.retry.errors.length).toBe(1)
+      expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[0].error).toBeDefined()
+      expect(updatedUser.retry.errors[0].stack).toBeDefined()
     })
   })
 
-  describe('when step is not completed', () => {
-    test('false', async () => {
-      const completed = { 'other': true }
-      const neoTask = new Retrycf.NeoTask()
-      neoTask.completed = completed
-      order.neoTask = neoTask.rawValue()
+  describe('data already exist retry', () => {
+    test('exist multiple error', async () => {
+      await user.update({ retry: defaultRetry })
+      const event = Rescue.event(user, { name: 'test', retry: defaultRetry })
+      const retry = await Retrycf.setRetry(event.data.ref, event.data.data(), error)
 
-      expect(Retrycf.NeoTask.isCompleted(order, 'step')).toEqual(false)
+      expect(retry.count).toBe(2)
+      expect(retry.errors.length).toBe(2)
+      expect(retry.errors[0].createdAt).toBeDefined()
+      expect(retry.errors[0].error).toBe(defaultRetry.errors[0].error)
+      expect(retry.errors[0].stack).toBeDefined()
+      expect(retry.errors[1].createdAt).toBeDefined()
+      expect(retry.errors[1].error).toBeDefined()
+      expect(retry.errors[1].stack).toBeDefined()
+
+      const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+      expect(updatedUser.retry.count).toBe(2)
+      expect(updatedUser.retry.errors.length).toBe(2)
+      expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[0].error).toBe(defaultRetry.errors[0].error)
+      expect(updatedUser.retry.errors[0].stack).toBeDefined()
+      expect(updatedUser.retry.errors[1].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[1].error).toBeDefined()
+      expect(updatedUser.retry.errors[1].stack).toBeDefined()
     })
   })
 
-  describe('when step is completed', () => {
-    test('true', async () => {
-      const completed = { [step]: true }
-      const neoTask = new Retrycf.NeoTask()
-      neoTask.completed = completed
-      order.neoTask = neoTask.rawValue()
+  describe('data.retry exist, but not exist count', () => {
+    test('only 1 error', async () => {
+      await user.update({ retry: {} })
+      const event = Rescue.event(user, { name: 'test', retry: {} })
+      const retry = await Retrycf.setRetry(event.data.ref, event.data.data(), error)
 
-      expect(Retrycf.NeoTask.isCompleted(order, 'step')).toEqual(true)
-    })
-  })
-})
+      expect(retry.count).toBe(1)
+      expect(retry.errors.length).toBe(1)
+      expect(retry.errors[0].createdAt).toBeDefined()
+      expect(retry.errors[0].error).toBeDefined()
+      expect(retry.errors[0].stack).toBeDefined()
 
-describe('setRetry', async () => {
-  let order: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    await order.save()
-  })
-
-  describe('when retry count is undefined', () => {
-    test('retry added and count is 1', async () => {
-      order.neoTask = undefined
-      const updatedOrder = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-      expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-      expect(updatedOrder.neoTask!.retry!.error).toEqual(['error'])
-      expect(updatedOrder.neoTask!.retry!.count).toEqual(1)
-
-      const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-      expect(fetchedOrder.neoTask!.retry!.error).toEqual(['error'])
-      expect(fetchedOrder.neoTask!.retry!.count).toEqual(1)
-
-      // check Failure
-      const failures = await Retrycf.Failure.querySnapshot(fetchedOrder.reference.path)
-      expect(failures.docs.length).toEqual(1)
-      const failure = new Retrycf.Failure()
-      failure.init(failures.docs[0])
-      expect(failure.refPath).toEqual(fetchedOrder.reference.path)
-      expect(failure.neoTask.status).toEqual(fetchedOrder.neoTask!.status)
-    })
-  })
-
-  describe('when retry count is already exist', () => {
-    test('count is 2', async () => {
-      order.neoTask = undefined
-      const updated1Order = await Retrycf.NeoTask.setRetry(order, 'step', 'error1')
-      const updated2Order = await Retrycf.NeoTask.setRetry(order, 'step', 'error2')
-      expect(updated2Order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-      expect(updated2Order.neoTask!.retry!.error).toEqual(['error1', 'error2'])
-      expect(updated2Order.neoTask!.retry!.count).toEqual(2)
-
-      const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-      expect(fetchedOrder.neoTask!.retry!.error).toEqual(['error1', 'error2'])
-      expect(fetchedOrder.neoTask!.retry!.count).toEqual(2)
-
-      // check Failure
-      const failures = await Retrycf.Failure.querySnapshot(fetchedOrder.reference.path)
-      expect(failures.docs.length).toEqual(1)
-      const failure = new Retrycf.Failure()
-      failure.init(failures.docs[0])
-      expect(failure.refPath).toEqual(fetchedOrder.reference.path)
-      expect(failure.neoTask.status).toEqual(fetchedOrder.neoTask!.status)
+      const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+      expect(updatedUser.retry.count).toBe(1)
+      expect(updatedUser.retry.errors.length).toBe(1)
+      expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
+      expect(updatedUser.retry.errors[0].error).toBeDefined()
+      expect(updatedUser.retry.errors[0].stack).toBeDefined()
     })
   })
 })
 
-describe('setInvalid', async () => {
-  let order: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    await order.save()
-  })
+describe('retryStatus', () => {
+  describe('data.retry.count is undefined', () => {
+    test('Status.ShouldNotRetry', async () => {
+      const currentData = undefined
+      const previousData = undefined
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
 
-  test('set invalid', async () => {
-    order.neoTask = undefined
-
-    const validationError = new Retrycf.ValidationError('errortype', 'reason')
-    const updatedOrder = await Retrycf.NeoTask.setInvalid(order, validationError)
-    expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-    expect(updatedOrder.neoTask!.invalid!.validationError).toEqual('errortype')
-    expect(updatedOrder.neoTask!.invalid!.reason).toEqual('reason')
-
-    const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-    expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-    expect(updatedOrder.neoTask!.invalid!.validationError).toEqual('errortype')
-    expect(updatedOrder.neoTask!.invalid!.reason).toEqual('reason')
-  })
-})
-
-describe('setFatal', async () => {
-  let order: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    await order.save()
-  })
-
-  test('set fatal', async () => {
-    order.neoTask = undefined
-    const updatedOrder = await Retrycf.NeoTask.setFatal(order, 'step', 'error')
-    expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-    expect(updatedOrder.neoTask!.fatal!.error).toEqual('error')
-    expect(updatedOrder.neoTask!.fatal!.step).toEqual('step')
-
-    const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-    expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-    expect(fetchedOrder.neoTask!.fatal!.error).toEqual('error')
-    expect(fetchedOrder.neoTask!.fatal!.step).toEqual('step')
-
-    // check Failure
-    const failures = await Retrycf.Failure.querySnapshot(fetchedOrder.reference.path)
-    expect(failures.docs.length).toEqual(1)
-    const failure = new Retrycf.Failure()
-    failure.init(failures.docs[0])
-    expect(failure.refPath).toEqual(fetchedOrder.reference.path)
-    expect(failure.neoTask.status).toEqual(fetchedOrder.neoTask!.status)
-  })
-})
-
-describe('setFatal', async () => {
-  let order: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    await order.save()
-  })
-
-  test('set fatal', async () => {
-    order.neoTask = undefined
-    const updatedOrder = await Retrycf.NeoTask.setFatal(order, 'step', 'error')
-    expect(updatedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-    expect(updatedOrder.neoTask!.fatal!.error).toEqual('error')
-    expect(updatedOrder.neoTask!.fatal!.step).toEqual('step')
-
-    const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-    expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-    expect(fetchedOrder.neoTask!.fatal!.error).toEqual('error')
-    expect(fetchedOrder.neoTask!.fatal!.step).toEqual('step')
-
-    // check Failure
-    const failures = await Retrycf.Failure.querySnapshot(fetchedOrder.reference.path)
-    expect(failures.docs.length).toEqual(1)
-    const failure = new Retrycf.Failure()
-    failure.init(failures.docs[0])
-    expect(failure.refPath).toEqual(fetchedOrder.reference.path)
-    expect(failure.neoTask.status).toEqual(fetchedOrder.neoTask!.status)
-  })
-})
-
-describe('getRetryCount', async () => {
-  let order: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    await order.save()
-  })
-
-  describe('when neotask is undefined', () => {
-    test('undefined', async () => {
-      order.neoTask = undefined
-      expect(Retrycf.NeoTask.getRetryCount(order)).toBeUndefined()
+      expect(retryStatus).toBe(Retrycf.Status.ShouldNotRetry)
     })
   })
 
-  describe('when retry set', () => {
-    test('one', async () => {
-      order.neoTask = undefined
-      const updatedOrder = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-      expect(Retrycf.NeoTask.getRetryCount(order)).toEqual(1)
-    })
-  })
-})
+  describe('data.retry.count is 1, previous is undefined', () => {
+    test('Status.ShouldRetry', async () => {
+      const currentData = { retry: { count: 1 } }
+      const previousData = undefined
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
 
-describe('getRetryCount', async () => {
-  let order: Model.SampleOrder
-  let preOrder: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    preOrder = new Model.SampleOrder()
-    await order.save()
-    await preOrder.save()
-  })
-
-  describe('current order retry count is undefined', () => {
-    test('false', async () => {
-      order.neoTask = undefined
-
-      expect(Retrycf.NeoTask.shouldRetry(order, undefined)).toEqual(false)
+      expect(retryStatus).toBe(Retrycf.Status.ShouldRetry)
     })
   })
 
-  describe('current order retry count is over 3', () => {
-    test('false', async () => {
-      order.neoTask = undefined
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
+  describe('data.retry.count is 1, previous is 1', () => {
+    test('Status.ShouldNotRetry', async () => {
+      const currentData = { retry: { count: 1 } }
+      const previousData = { retry: { count: 1 } }
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
 
-      expect(Retrycf.NeoTask.shouldRetry(order, undefined)).toEqual(false)
+      expect(retryStatus).toBe(Retrycf.Status.ShouldNotRetry)
     })
   })
 
-  describe('current order retry count is under 2 and previous count is undefined', () => {
-    test('true', async () => {
-      order.neoTask = undefined
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
+  describe('data.retry.count is 3, previous is 2', () => {
+    test('Status.RetryFailed', async () => {
+      const currentData = { retry: { count: 3 } }
+      const previousData = { retry: { count: 2 } }
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
 
-      expect(Retrycf.NeoTask.shouldRetry(order, undefined)).toEqual(true)
+      expect(retryStatus).toBe(Retrycf.Status.RetryFailed)
     })
   })
 
-  describe('current order retry count is 2 and previous count is 1', () => {
-    test('true', async () => {
-      order.neoTask = undefined
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
+  describe('data.retry.count is 2, previous is 3', () => {
+    test('Status.ShouldNotRetry', async () => {
+      const currentData = { retry: { count: 2 } }
+      const previousData = { retry: { count: 3 } }
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
 
-      preOrder.neoTask = undefined
-      preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-
-      expect(Retrycf.NeoTask.shouldRetry(order, preOrder)).toEqual(true)
+      expect(retryStatus).toBe(Retrycf.Status.ShouldNotRetry)
     })
   })
 
-  describe('current order retry count is 1 and previous count is 2', () => {
-    test('false', async () => {
-      order.neoTask = undefined
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
+  describe('data.retry undefined', () => {
+    test('Status.ShouldNotRetry', async () => {
+      const currentData = { retry: undefined }
+      const previousData = { retry: undefined }
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
 
-      preOrder.neoTask = undefined
-      preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-      preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-
-      expect(Retrycf.NeoTask.shouldRetry(order, preOrder)).toEqual(false)
-    })
-  })
-})
-
-describe('setFatalIfRetryCountIsMax', async () => {
-  let order: Model.SampleOrder
-  let preOrder: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    preOrder = new Model.SampleOrder()
-    await order.save()
-    await preOrder.save()
-  })
-
-  describe('current retry count is undefined', () => {
-    test('failure not set', async () => {
-      order.neoTask = undefined
-
-      await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, undefined)
-      const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-      expect(failures.docs.length).toEqual(0)
+      expect(retryStatus).toBe(Retrycf.Status.ShouldNotRetry)
     })
   })
 
-  describe('current and previous retry count is undefined', () => {
-    test('failure not set', async () => {
-      order.neoTask = undefined
-      preOrder.neoTask = undefined
+  describe('data.retry exist, but data.retry.count is undefined', () => {
+    test('Status.ShouldNotRetry', async () => {
+      const currentData = { retry: {} }
+      const previousData = { retry: {} }
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
 
-      await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, preOrder)
-      const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-      expect(failures.docs.length).toEqual(0)
+      expect(retryStatus).toBe(Retrycf.Status.ShouldNotRetry)
     })
   })
 
-  describe('only previous retry count is undefined', () => {
-    test('fatal not set', async () => {
-      order.neoTask = undefined
-      order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-      preOrder.neoTask = undefined
+  describe('change maxRetryCount to 3', () => {
+    describe('data.retry.count is 3, previous is 2', () => {
+      test('Status.ShouldRetry', async () => {
+        const currentData = { retry: { count: 3 } }
+        const previousData = { retry: { count: 2 } }
+        const retryStatus = Retrycf.retryStatus(currentData, previousData, 3)
 
-      await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, preOrder)
-
-      const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-      const failure = new Retrycf.Failure()
-      failure.init(failures.docs[0])
-      expect(failure.neoTask.fatal).toBeUndefined()
-    })
-  })
-
-  describe('both current and previous are not undefined', () => {
-    describe('current retry count is over MAX', () => {
-      describe('current retry count > prevous retry count', () => {
-        test('fatal set', async () => {
-          order.neoTask = undefined
-          order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-          order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-          order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-          order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-          preOrder.neoTask = undefined
-          preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-          preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-          preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-
-          order = await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, preOrder)
-          expect(order.neoTask!.fatal!.step).toEqual('retry_failed')
-          expect(order.neoTask!.fatal!.error).toEqual('retry failed')
-
-          const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-          const failure = new Retrycf.Failure()
-          failure.init(failures.docs[0])
-
-          expect(failure.neoTask.fatal!.step).toEqual('retry_failed')
-          expect(failure.neoTask.fatal!.error).toEqual('retry failed')
-        })
-      })
-
-      describe('current retry count < prevous retry count', () => {
-        test('fatal not set', async () => {
-          order.neoTask = undefined
-          order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-          preOrder.neoTask = undefined
-          preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-          preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
-
-          await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, preOrder)
-
-          const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-          const failure = new Retrycf.Failure()
-          failure.init(failures.docs[0])
-          expect(failure.neoTask.fatal).toBeUndefined()
-        })
+        expect(retryStatus).toBe(Retrycf.Status.ShouldRetry)
       })
     })
 
-    describe('current retry count is under MAX', () => {
-      test('fatal not set', async () => {
-        order.neoTask = undefined
-        order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-        order = await Retrycf.NeoTask.setRetry(order, 'step', 'error')
-        preOrder.neoTask = undefined
-        preOrder = await Retrycf.NeoTask.setRetry(preOrder, 'step', 'error')
+    describe('data.retry.count is 3, previous is 1', () => {
+      test('Status.ShouldNotRetry', async () => {
+        const currentData = { retry: { count: 3 } }
+        const previousData = { retry: { count: 1 } }
+        const retryStatus = Retrycf.retryStatus(currentData, previousData, 3)
 
-        await Retrycf.NeoTask.setFatalIfRetryCountIsMax(order, preOrder)
-
-        const failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-        const failure = new Retrycf.Failure()
-        failure.init(failures.docs[0])
-        expect(failure.neoTask.fatal).toBeUndefined()
+        expect(retryStatus).toBe(Retrycf.Status.ShouldNotRetry)
       })
     })
   })
 })
 
-describe('setSuccess', async () => {
-  let order: Model.SampleOrder
-  beforeEach(async () => {
-    order = new Model.SampleOrder()
-    await order.save()
-  })
+describe('clear', () => {
+  test('update to {}', async () => {
+    // prepare
+    const event = Rescue.event(user, data)
+    await Retrycf.setRetry(event.data.ref, event.data.data(), error)
+    let updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+    expect(updatedUser.retry.count).toBe(1)
 
-  describe('failure exists', () => {
-    test('failure deleted', async () => {
-      order.neoTask = undefined
-      order = await Retrycf.NeoTask.setFatal(order, 'step', 'error')
-      expect(order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.failure)
-      let failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-      expect(failures.docs.length).toEqual(1)
+    // clear
+    const retry = await Retrycf.clear(user)
 
-      order = await Retrycf.NeoTask.setSuccess(order)
-      expect(order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
-
-      const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
-
-      // check Failure deleted
-      failures = await Retrycf.Failure.querySnapshot(order.reference.path)
-      expect(failures.docs.length).toEqual(0)
-    })
-  })
-
-  describe('failure not exists', () => {
-    test('success', async () => {
-      order.neoTask = undefined
-      order = await Retrycf.NeoTask.setSuccess(order)
-      expect(order.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
-
-      const fetchedOrder = await Model.SampleOrder.get(order.id) as Model.SampleOrder
-      expect(fetchedOrder.neoTask!.status).toEqual(Retrycf.NeoTaskStatus.success)
-    })
+    // expect
+    expect(retry).toEqual({})
+    updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
+    expect(updatedUser.retry).toEqual({})
   })
 })

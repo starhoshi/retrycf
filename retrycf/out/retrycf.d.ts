@@ -1,62 +1,53 @@
 import * as FirebaseFirestore from '@google-cloud/firestore';
-import { Pring } from 'pring';
 /**
- * Initialize Retrycf
- * @param options functions.config().firebase
+ * Initialize in your index.ts.
+ * @param adminOptions functions.config().firebase
+ * @param options maxRetryCount
  */
-export declare function initialize(options?: any): void;
-export declare class CompletedError extends Error {
-    step: string;
-    constructor(step: string);
+export declare const initialize: (adminOptions: any, options?: {
+    maxRetryCount: number;
+} | undefined) => void;
+/**
+ * Retrycf.Status
+ */
+export declare enum Status {
+    /** should not retry */
+    ShouldNotRetry = "ShouldRetry",
+    /** should retry */
+    ShouldRetry = "ShouldRetry",
+    /** retry failed */
+    RetryFailed = "RetryFailed",
 }
-export declare class ValidationError extends Error {
-    validationErrorType: string;
-    reason: string;
-    option?: any;
-    constructor(validationErrorType: string, reason: string);
+/**
+ * Parameters to be saved by setRetry()
+ */
+export interface IRetry {
+    /** retry count */
+    count: number;
+    /** Record retry reason */
+    errors: {
+        createdAt: Date;
+        error: any;
+        stack: string;
+    }[];
 }
-export declare class Failure<T extends HasNeoTask> extends Pring.Base {
-    ref: FirebaseFirestore.DocumentReference;
-    refPath: string;
-    neoTask: NeoTask;
-    static querySnapshot(refPath: string): Promise<FirebaseFirestore.QuerySnapshot>;
-    static setFailure<T extends HasNeoTask>(model: T, neoTask: NeoTask): Promise<FirebaseFirestore.WriteResult[]>;
-    static deleteFailure<T extends HasNeoTask>(model: T): Promise<void>;
-}
-export declare enum NeoTaskStatus {
-    none = 0,
-    success = 1,
-    failure = 2,
-}
-export interface HasNeoTask extends Pring.Base {
-    neoTask?: NeoTask;
-}
-export declare class NeoTask extends Pring.Base {
-    status?: NeoTaskStatus;
-    completed?: {
-        [id: string]: boolean;
-    };
-    invalid?: {
-        validationError: string;
-        reason: string;
-    };
-    retry?: {
-        error: any[];
-        count: number;
-    };
-    fatal?: {
-        step: string;
-        error: string;
-    };
-    static clearCompleted<T extends HasNeoTask>(model: T): Promise<T>;
-    static isCompleted<T extends HasNeoTask>(model: T, step: string): boolean;
-    static makeNeoTask<T extends HasNeoTask>(model: T): NeoTask;
-    static setRetry<T extends HasNeoTask>(model: T, step: string, error: any): Promise<T>;
-    static setInvalid<T extends HasNeoTask>(model: T, error: ValidationError): Promise<T>;
-    static setFatal<T extends HasNeoTask>(model: T, step: string, error: any): Promise<T>;
-    static getRetryCount<T extends HasNeoTask>(model: T): number | undefined;
-    private static MAX_RETRY_COUNT;
-    static shouldRetry<T extends HasNeoTask>(model: T, previoudModel?: T): boolean;
-    static setFatalIfRetryCountIsMax<T extends HasNeoTask>(model: T, previoudModel?: T): Promise<T>;
-    static setSuccess<T extends HasNeoTask>(model: T): Promise<T>;
-}
+/**
+ * save retry parameters.
+ * @param ref event.data.ref
+ * @param data event.data.data()
+ * @param error Error
+ */
+export declare const setRetry: (ref: FirebaseFirestore.DocumentReference, data: any, error: Error) => Promise<IRetry>;
+/**
+ * If retry.count is increasing from previousData, it returns ShouldRetry.
+ * If retry.count is increased from previousData and it exceeds max retry count, RetryFailed is returned.
+ * @param data event.data.data()
+ * @param previousData event.data.previous.data()
+ * @param maxRetryCount optional. If you change maxRetryCount, set number.
+ */
+export declare const retryStatus: (data: any, previousData: any, maxRetryCount?: number) => Status;
+/**
+ * update retry to {}.
+ * @param ref event.data.ref
+ */
+export declare const clear: (ref: FirebaseFirestore.DocumentReference) => Promise<{}>;
