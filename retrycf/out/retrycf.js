@@ -35,7 +35,7 @@ var Status;
     Status["RetryFailed"] = "RetryFailed";
 })(Status = exports.Status || (exports.Status = {}));
 const makeRetry = (data, error) => {
-    const currentError = { createdAt: new Date(), error: error };
+    const currentError = { createdAt: new Date(), error: error.toString(), stack: error.stack || '' };
     let retry = { count: 0, errors: new Array() };
     if (data.retry && data.retry.count) {
         retry = data.retry;

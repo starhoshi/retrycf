@@ -28,6 +28,7 @@ export interface IRetry {
     errors: {
         createdAt: Date;
         error: any;
+        stack: string;
     }[];
 }
 /**
@@ -36,7 +37,7 @@ export interface IRetry {
  * @param data event.data.data()
  * @param error Error
  */
-export declare const setRetry: (ref: FirebaseFirestore.DocumentReference, data: any, error: any) => Promise<IRetry>;
+export declare const setRetry: (ref: FirebaseFirestore.DocumentReference, data: any, error: Error) => Promise<IRetry>;
 /**
  * If retry.count is increasing from previousData, it returns ShouldRetry.
  * If retry.count is increased from previousData and it exceeds max retry count, RetryFailed is returned.

@@ -18,8 +18,8 @@ beforeAll(() => {
 
 let user: FirebaseFirestore.DocumentReference
 const data = { name: 'test' }
-const error = 'An error occured'
-const defaultRetry = { count: 1, errors: [{ createdAt: new Date(), error: error }] }
+const error = Error('An error occured')
+const defaultRetry = { count: 1, errors: [{ createdAt: new Date(), error: error.toString(), stack: 'line:1' }] }
 
 beforeEach(async () => {
   user = await admin.firestore().collection('retrycf-user').add(data)
@@ -34,13 +34,15 @@ describe('setRetry', () => {
       expect(retry.count).toBe(1)
       expect(retry.errors.length).toBe(1)
       expect(retry.errors[0].createdAt).toBeDefined()
-      expect(retry.errors[0].error).toBe(error)
+      expect(retry.errors[0].error).toBeDefined()
+      expect(retry.errors[0].stack).toBeDefined()
 
       const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
       expect(updatedUser.retry.count).toBe(1)
       expect(updatedUser.retry.errors.length).toBe(1)
       expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
-      expect(updatedUser.retry.errors[0].error).toBe(error)
+      expect(updatedUser.retry.errors[0].error).toBeDefined()
+      expect(updatedUser.retry.errors[0].stack).toBeDefined()
     })
   })
 
@@ -54,16 +56,20 @@ describe('setRetry', () => {
       expect(retry.errors.length).toBe(2)
       expect(retry.errors[0].createdAt).toBeDefined()
       expect(retry.errors[0].error).toBe(defaultRetry.errors[0].error)
+      expect(retry.errors[0].stack).toBeDefined()
       expect(retry.errors[1].createdAt).toBeDefined()
-      expect(retry.errors[1].error).toBe(error)
+      expect(retry.errors[1].error).toBeDefined()
+      expect(retry.errors[1].stack).toBeDefined()
 
       const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
       expect(updatedUser.retry.count).toBe(2)
       expect(updatedUser.retry.errors.length).toBe(2)
       expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
       expect(updatedUser.retry.errors[0].error).toBe(defaultRetry.errors[0].error)
+      expect(updatedUser.retry.errors[0].stack).toBeDefined()
       expect(updatedUser.retry.errors[1].createdAt).toBeDefined()
-      expect(updatedUser.retry.errors[1].error).toBe(error)
+      expect(updatedUser.retry.errors[1].error).toBeDefined()
+      expect(updatedUser.retry.errors[1].stack).toBeDefined()
     })
   })
 
@@ -76,13 +82,15 @@ describe('setRetry', () => {
       expect(retry.count).toBe(1)
       expect(retry.errors.length).toBe(1)
       expect(retry.errors[0].createdAt).toBeDefined()
-      expect(retry.errors[0].error).toBe(error)
+      expect(retry.errors[0].error).toBeDefined()
+      expect(retry.errors[0].stack).toBeDefined()
 
       const updatedUser = await admin.firestore().doc(user.path).get().then(s => s.data()!)
       expect(updatedUser.retry.count).toBe(1)
       expect(updatedUser.retry.errors.length).toBe(1)
       expect(updatedUser.retry.errors[0].createdAt).toBeDefined()
-      expect(updatedUser.retry.errors[0].error).toBe(error)
+      expect(updatedUser.retry.errors[0].error).toBeDefined()
+      expect(updatedUser.retry.errors[0].stack).toBeDefined()
     })
   })
 })
