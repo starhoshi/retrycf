@@ -66,7 +66,7 @@ const getRetryCount = (data) => {
     if (data.retry === undefined) {
         return undefined;
     }
-    if (!data.retry.count === undefined) {
+    if (data.retry.count === undefined) {
         return undefined;
     }
     return data.retry.count;
