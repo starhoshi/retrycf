@@ -81,6 +81,10 @@ const getRetryCount = (data) => {
 exports.retryStatus = (data, previousData, maxRetryCount = _maxRetryCount) => {
     const currentCount = getRetryCount(data);
     const previousCount = getRetryCount(previousData);
+    console.log('currentCount', currentCount);
+    console.log('previousCount', previousCount);
+    console.log('currentData', data);
+    console.log('previousData', previousData);
     if (currentCount === undefined) {
         return Status.ShouldNotRetry;
     }
