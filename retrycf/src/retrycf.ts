@@ -67,13 +67,13 @@ export const setRetry = async (ref: FirebaseFirestore.DocumentReference, data: a
  * @param data event.data.data()
  */
 const getRetryCount = (data?: any) => {
-  if (!data) {
+  if (data === undefined) {
     return undefined
   }
-  if (!data.retry) {
+  if (data.retry === undefined) {
     return undefined
   }
-  if (!data.retry.count) {
+  if (!data.retry.count === undefined) {
     return undefined
   }
   return data.retry.count
@@ -96,8 +96,11 @@ export const retryStatus = (data: any, previousData: any, maxRetryCount: number 
   console.log('previousData', previousData)
 
   if (currentCount === undefined) {
+    console.log('current undefined')
     return Status.ShouldNotRetry
   }
+
+    console.log('current not undefined', currentCount)
 
   if (previousCount === undefined && currentCount === 1) {
     return Status.ShouldRetry

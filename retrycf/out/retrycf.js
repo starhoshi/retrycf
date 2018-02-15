@@ -60,13 +60,13 @@ exports.setRetry = (ref, data, error) => __awaiter(this, void 0, void 0, functio
  * @param data event.data.data()
  */
 const getRetryCount = (data) => {
-    if (!data) {
+    if (data === undefined) {
         return undefined;
     }
-    if (!data.retry) {
+    if (data.retry === undefined) {
         return undefined;
     }
-    if (!data.retry.count) {
+    if (!data.retry.count === undefined) {
         return undefined;
     }
     return data.retry.count;
@@ -86,8 +86,10 @@ exports.retryStatus = (data, previousData, maxRetryCount = _maxRetryCount) => {
     console.log('currentData', data);
     console.log('previousData', previousData);
     if (currentCount === undefined) {
+        console.log('current undefined');
         return Status.ShouldNotRetry;
     }
+    console.log('current not undefined', currentCount);
     if (previousCount === undefined && currentCount === 1) {
         return Status.ShouldRetry;
     }
