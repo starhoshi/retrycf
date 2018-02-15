@@ -12,7 +12,7 @@ export declare const initialize: (adminOptions: any, options?: {
  */
 export declare enum Status {
     /** should not retry */
-    ShouldNotRetry = "ShouldRetry",
+    ShouldNotRetry = "ShouldNotRetry",
     /** should retry */
     ShouldRetry = "ShouldRetry",
     /** retry failed */

@@ -28,7 +28,7 @@ exports.initialize = (adminOptions, options) => {
 var Status;
 (function (Status) {
     /** should not retry */
-    Status["ShouldNotRetry"] = "ShouldRetry";
+    Status["ShouldNotRetry"] = "ShouldNotRetry";
     /** should retry */
     Status["ShouldRetry"] = "ShouldRetry";
     /** retry failed */
@@ -81,15 +81,9 @@ const getRetryCount = (data) => {
 exports.retryStatus = (data, previousData, maxRetryCount = _maxRetryCount) => {
     const currentCount = getRetryCount(data);
     const previousCount = getRetryCount(previousData);
-    console.log('currentCount', currentCount);
-    console.log('previousCount', previousCount);
-    console.log('currentData', data);
-    console.log('previousData', previousData);
     if (currentCount === undefined) {
-        console.log('current undefined');
         return Status.ShouldNotRetry;
     }
-    console.log('current not undefined', currentCount);
     if (previousCount === undefined && currentCount === 1) {
         return Status.ShouldRetry;
     }

@@ -166,6 +166,16 @@ describe('retryStatus', () => {
     })
   })
 
+  describe('data.retry.count undefined', () => {
+    test('Status.ShouldNotRetry', async () => {
+      const currentData = { retry: { count: undefined } }
+      const previousData = { retry: { counst: undefined } }
+      const retryStatus = Retrycf.retryStatus(currentData, previousData)
+
+      expect(retryStatus).toBe(Retrycf.Status.ShouldNotRetry)
+    })
+  })
+
   describe('data.retry exist, but data.retry.count is undefined', () => {
     test('Status.ShouldNotRetry', async () => {
       const currentData = { retry: {} }

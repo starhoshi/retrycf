@@ -21,7 +21,7 @@ export const initialize = (adminOptions: any, options?: { maxRetryCount: number 
  */
 export enum Status {
   /** should not retry */
-  ShouldNotRetry = 'ShouldRetry',
+  ShouldNotRetry = 'ShouldNotRetry',
   /** should retry */
   ShouldRetry = 'ShouldRetry',
   /** retry failed */
@@ -90,17 +90,9 @@ export const retryStatus = (data: any, previousData: any, maxRetryCount: number 
   const currentCount: number | undefined = getRetryCount(data)
   const previousCount: number | undefined = getRetryCount(previousData)
 
-  console.log('currentCount', currentCount)
-  console.log('previousCount', previousCount)
-  console.log('currentData', data)
-  console.log('previousData', previousData)
-
   if (currentCount === undefined) {
-    console.log('current undefined')
     return Status.ShouldNotRetry
   }
-
-    console.log('current not undefined', currentCount)
 
   if (previousCount === undefined && currentCount === 1) {
     return Status.ShouldRetry
