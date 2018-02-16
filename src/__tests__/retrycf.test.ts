@@ -5,14 +5,14 @@ import 'jest'
 
 jest.setTimeout(20000)
 beforeAll(() => {
-  const serviceAccount = require('../../../sandbox-329fc-firebase-adminsdk.json')
+  const serviceAccount = require('../../sandbox-329fc-firebase-adminsdk.json')
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   })
 
   Retrycf.initialize({
     projectId: 'sandbox-329fc',
-    keyFilename: '../sandbox-329fc-firebase-adminsdk.json'
+    keyFilename: './sandbox-329fc-firebase-adminsdk.json'
   }, { maxRetryCount: 2 })
 })
 
