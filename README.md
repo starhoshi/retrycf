@@ -18,7 +18,7 @@ yarn install retrycf
 export const updateTestOrder = functions.firestore.document(`order/{orderID}`).onUpdate(async event => {
   const retryStatus = Retrycf.retryStatus(event.data.data(), event.data.previous.data())
   switch (retryStatus) {
-      case Retrycf.Status.ShouldRetry
+      case Retrycf.Status.ShouldRetry:
       case Retrycf.Status.ShouldNotRetry:
           break
       case Retrycf.Status.RetryFailed:
