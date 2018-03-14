@@ -9,8 +9,8 @@ let _maxRetryCount: number = 2
  * @param adminOptions functions.config().firebase
  * @param options maxRetryCount
  */
-export const initialize = (adminOptions: any, options?: { maxRetryCount: number }) => {
-  _firestore = new FirebaseFirestore.Firestore(adminOptions)
+export const initialize = (firestore: FirebaseFirestore.Firestore, options?: { maxRetryCount: number }) => {
+  _firestore = firestore
   if (options) {
     _maxRetryCount = options.maxRetryCount
   }

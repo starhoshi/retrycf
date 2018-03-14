@@ -8,7 +8,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const FirebaseFirestore = require("@google-cloud/firestore");
 let _firestore;
 let _maxRetryCount = 2;
 /**
@@ -16,8 +15,8 @@ let _maxRetryCount = 2;
  * @param adminOptions functions.config().firebase
  * @param options maxRetryCount
  */
-exports.initialize = (adminOptions, options) => {
-    _firestore = new FirebaseFirestore.Firestore(adminOptions);
+exports.initialize = (firestore, options) => {
+    _firestore = firestore;
     if (options) {
         _maxRetryCount = options.maxRetryCount;
     }

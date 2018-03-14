@@ -10,10 +10,7 @@ beforeAll(() => {
     credential: admin.credential.cert(serviceAccount)
   })
 
-  Retrycf.initialize({
-    projectId: 'sandbox-329fc',
-    keyFilename: './sandbox-329fc-firebase-adminsdk.json'
-  }, { maxRetryCount: 2 })
+  Retrycf.initialize(admin.firestore(), { maxRetryCount: 2 })
 })
 
 let user: FirebaseFirestore.DocumentReference

@@ -4,7 +4,7 @@ import * as FirebaseFirestore from '@google-cloud/firestore';
  * @param adminOptions functions.config().firebase
  * @param options maxRetryCount
  */
-export declare const initialize: (adminOptions: any, options?: {
+export declare const initialize: (firestore: FirebaseFirestore.Firestore, options?: {
     maxRetryCount: number;
 } | undefined) => void;
 /**
